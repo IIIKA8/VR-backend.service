@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Backend - Админка</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div id="adminLoginModal" class="modal" style="display: flex;">
+        <div class="modal-content">
+            <h2>Вход в админку</h2>
+            <input type="password" id="adminPasswordInput" class="form-control" placeholder="Пароль администратора">
+            <button id="adminLoginBtn" class="btn btn-primary">Войти</button>
+            <div id="adminLoginError" class="login-error"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header class="admin-header">
+            <h1 class="title">VR Backend - Админка</h1>
+            <nav class="nav-tabs">
+                <a href="/" class="nav-tab">Дашборд</a>
+                <a href="/admin" class="nav-tab active">Админка</a>
+            </nav>
+        </header>
+        
+        <!-- Панель вфдачи лицензии -->
+        <div class="panel license-panel">
+            <h2 class="panel-title">Выдать лицензию</h2>
+            <form id="issueLicenseForm" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="deviceSelect">ID очков</label>
+                        <select id="deviceSelect" class="form-control" required>
+                            <option value="">Выберите устройство...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="userSelect">UID пациент</label>
+                        <div class="searchable-select">
+                            <input 
+                                type="text" 
+                                id="userSearchInput" 
+                                class="form-control search-input" 
+                                placeholder="Начните вводить ФИО..."
+                                autocomplete="off"
+                            >
+                            <div id="userDropdown" class="search-dropdown" style="display: none;">
+                                <!-- Список пользователей наверное будет здесь -->
+                                <div class="search-dropdown-list" id="userDropdownList">
+                                </div>
+                            </div>
+                            <input type="hidden" id="userSelect" name="userId" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="isSessionCheck">
+                            <span>Сессионный</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-row" id="periodDates" style="display: none;">
+                    <div class="form-group">
+                        <label for="startDate">Период с</label>
+                        <input type="datetime-local" id="startDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">По</label>
+                        <input type="datetime-local" id="endDate" class="form-control">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Выдать лицензию</button>
+            </form>
+        </div>
+        
+        <!-- Панель создания пользователя -->
+        <div class="panel user-panel">
+            <h2 class="panel-title">Создать пользователя</h2>
+            <form id="createUserForm" class="form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lastName">Фамилия</label>
+                        <input type="text" id="lastName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firstName">Имя</label>
+                        <input type="text" id="firstName" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="middleName">Отчество</label>
+                        <input type="text" id="middleName" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="age">Возраст</label>
+                        <input type="number" id="age" class="form-control" min="1" max="120">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Создать</button>
+            </form>
+        </div>
+        
+        <!-- Панель с вкладками для таблиц -->
+        <div class="panel table-panel">
+            <div class="table-tabs">
+                <button class="table-tab active" data-tab="licenses">Лицензии</button>
+                <button class="table-tab" data-tab="users">Пользователи</button>
+            </div>
+            
+            <!-- Таблица лицензий -->
+            <div id="licensesTab" class="table-content active">
+                <h2 class="panel-title">Лицензии</h2>
+                <div class="table-container">
+                    <table id="licensesTable" class="licenses-table">
+                        <thead>
+                            <tr>
+                                <th>Код</th>
+                                <th>Фамилия</th>
+                                <th>Имя</th>
+                                <th>Отчество</th>
+                                <th>Тип</th>
+                                <th>С</th>
+                                <th>По</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="licensesTableBody">
+                            <tr>
+                                <td colspan="8" class="loading">Загрузка...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Таблица пользователей -->
+            <div id="usersTab" class="table-content">
+                <h2 class="panel-title">Пользователи</h2>
+                <div class="table-container">
+                    <table id="usersTable" class="licenses-table">
+                        <thead>
+                            <tr>
+                                <th>Фамилия</th>
+                                <th>Имя</th>
+                                <th>Отчество</th>
+                                <th>Возраст</th>
+                                <th>Статус</th>
+                                <th>Последний визит</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">Загрузка...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/js/admin.js" defer></script>
+</body>
+</html>

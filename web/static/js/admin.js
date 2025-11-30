@@ -1,0 +1,608 @@
+const API_BASE = '/api';
+
+// --- Авторизация админки --- //
+document.addEventListener('DOMContentLoaded', async function() {
+    const modal = document.getElementById('adminLoginModal');
+    const input = document.getElementById('adminPasswordInput');
+    const btn = document.getElementById('adminLoginBtn');
+    const err = document.getElementById('adminLoginError');
+    const pageContent = document.querySelector('.container');
+
+    // ПРОВЕРКА — если уже авторизован, модалка не появляется
+    let isAdmin = false;
+    try {
+        const resp = await fetch('/api/admin/status', { credentials: 'same-origin' });
+        const stat = await resp.json();
+        if (stat.isAdmin) {
+            modal.style.display = 'none';
+            pageContent.style.filter = '';
+            isAdmin = true;
+        }
+    } catch(e){}
+    if (isAdmin) return;
+    modal.style.display = 'flex';
+    pageContent.style.filter = 'blur(6px)';
+
+    btn.onclick = async function() {
+        err.textContent = '';
+        const password = input.value;
+        const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ password })
+        });
+        if (res.ok) {
+            modal.style.display = 'none';
+            pageContent.style.filter = '';
+            window.location.reload();
+        } else {
+            err.textContent = 'Неверный пароль или нет доступа!';
+            input.value = '';
+        }
+    };
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') btn.click();
+    });
+});
+// --- конец авторизации --- //
+
+// Проверка подключения к серверу
+async function checkServerConnection() {
+    try {
+        console.log('🔍 Проверка подключения к серверу...');
+        console.log('🌐 URL:', `${API_BASE}/health`);
+        
+        const response = await fetch(`${API_BASE}/health`);
+        console.log('📥 Статус:', response.status);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Сервер доступен:', data);
+            return true;
+        } else {
+            const text = await response.text();
+            console.error('❌ Сервер вернул ошибку:', response.status, text);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Ошибка подключения к серверу:', error);
+        console.error('   Тип:', error.name);
+        console.error('   Сообщение:', error.message);
+        return false;
+    }
+}
+
+// Загрузка устройств и пользователей
+async function loadDevices() {
+    try {
+        const response = await fetch(`${API_BASE}/devices`);
+        const devices = await response.json();
+        const select = document.getElementById('deviceSelect');
+        select.innerHTML = '<option value="">Выберите устройство...</option>';
+        devices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device._id;
+            option.textContent = `${device.name} (${device.deviceId || device.key || 'N/A'})`;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Ошибка загрузки устройств:', error);
+    }
+}
+
+// Глобальная переменная для хранения всех пользователей
+let allUsers = [];
+
+// Загрузка пользователей с сохранением в глобальную переменную
+async function loadUsers() {
+    try {
+        const response = await fetch(`${API_BASE}/users`);
+        allUsers = await response.json();
+        
+        // Обновляем dropdown
+        updateUserDropdown('');
+        
+        console.log(`✅ Загружено ${allUsers.length} пользователей`);
+    } catch (error) {
+        console.error('Ошибка загрузки пользователей:', error);
+    }
+}
+
+// Обновление dropdown списка пользователей с фильтрацией
+function updateUserDropdown(searchText = '') {
+    const dropdownList = document.getElementById('userDropdownList');
+    const dropdown = document.getElementById('userDropdown');
+    const searchInput = document.getElementById('userSearchInput');
+    const hiddenInput = document.getElementById('userSelect');
+    
+    // Фильтрация пользователей
+    const filteredUsers = allUsers.filter(user => {
+        if (!searchText) return true;
+        
+        const searchLower = searchText.toLowerCase();
+        const lastName = (user.lastName || '').toLowerCase();
+        const firstName = (user.firstName || '').toLowerCase();
+        const middleName = (user.middleName || '').toLowerCase();
+        const fullName = `${lastName} ${firstName} ${middleName}`.trim();
+        
+        return lastName.startsWith(searchLower) || 
+               firstName.startsWith(searchLower) || 
+               middleName.startsWith(searchLower) ||
+               fullName.includes(searchLower);
+    });
+    
+    // Очистка списка
+    dropdownList.innerHTML = '';
+    
+    if (filteredUsers.length === 0) {
+        dropdownList.innerHTML = '<div class="search-dropdown-item empty">Пользователи не найдены</div>';
+        dropdown.style.display = 'block';
+        return;
+    }
+    
+    // Добавление отфильтрованных пользователей
+    filteredUsers.forEach(user => {
+        const fullName = [user.lastName, user.firstName, user.middleName]
+            .filter(Boolean)
+            .join(' ') || user.username || user.email;
+        const ageText = user.age ? ` (${user.age} лет)` : '';
+        const displayText = `${fullName}${ageText}`;
+        
+        const item = document.createElement('div');
+        item.className = 'search-dropdown-item';
+        item.textContent = displayText;
+        item.dataset.userId = user._id;
+        item.dataset.fullName = fullName;
+        
+        // Выделение совпадающего текста
+        if (searchText) {
+            const regex = new RegExp(`(${searchText})`, 'gi');
+            item.innerHTML = displayText.replace(regex, '<strong>$1</strong>');
+        }
+        
+        // Обработчик клика
+        item.addEventListener('click', () => {
+            hiddenInput.value = user._id;
+            searchInput.value = fullName;
+            dropdown.style.display = 'none';
+            
+            // Визуальная обратная связь
+            searchInput.style.borderColor = '#3498db';
+            setTimeout(() => {
+                searchInput.style.borderColor = '#34495e';
+            }, 1000);
+        });
+        
+        dropdownList.appendChild(item);
+    });
+    
+    // Показать dropdown если есть текст поиска
+    if (searchText || filteredUsers.length > 0) {
+        dropdown.style.display = 'block';
+    }
+}
+
+// Инициализация поиска пользователей
+function initUserSearch() {
+    const searchInput = document.getElementById('userSearchInput');
+    const dropdown = document.getElementById('userDropdown');
+    const hiddenInput = document.getElementById('userSelect');
+    
+    // Обработчик ввода текста
+    searchInput.addEventListener('input', (e) => {
+        const searchText = e.target.value.trim();
+        updateUserDropdown(searchText);
+        
+        // Очистить скрытое поле если текст удален
+        if (!searchText) {
+            hiddenInput.value = '';
+        }
+    });
+    
+    // Обработчик фокуса
+    searchInput.addEventListener('focus', () => {
+        const searchText = searchInput.value.trim();
+        if (searchText || allUsers.length > 0) {
+            updateUserDropdown(searchText);
+        }
+    });
+    
+    // Скрыть dropdown при клике вне элемента
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.searchable-select')) {
+            dropdown.style.display = 'none';
+        }
+    });
+    
+    // Обработка клавиатуры
+    searchInput.addEventListener('keydown', (e) => {
+        const items = dropdown.querySelectorAll('.search-dropdown-item:not(.empty)');
+        const selected = dropdown.querySelector('.search-dropdown-item.selected');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (selected) {
+                selected.classList.remove('selected');
+                const next = selected.nextElementSibling;
+                if (next && !next.classList.contains('empty')) {
+                    next.classList.add('selected');
+                    next.scrollIntoView({ block: 'nearest' });
+                }
+            } else if (items.length > 0) {
+                items[0].classList.add('selected');
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (selected) {
+                selected.classList.remove('selected');
+                const prev = selected.previousElementSibling;
+                if (prev && !prev.classList.contains('empty')) {
+                    prev.classList.add('selected');
+                    prev.scrollIntoView({ block: 'nearest' });
+                }
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selected && !selected.classList.contains('empty')) {
+                selected.click();
+            }
+        } else if (e.key === 'Escape') {
+            dropdown.style.display = 'none';
+            searchInput.blur();
+        }
+    });
+}
+
+// Переключение видимости полей периода
+document.getElementById('isSessionCheck').addEventListener('change', function() {
+    const periodDates = document.getElementById('periodDates');
+    periodDates.style.display = this.checked ? 'none' : 'grid';
+    if (!this.checked) {
+        document.getElementById('startDate').required = true;
+        document.getElementById('endDate').required = true;
+    } else {
+        document.getElementById('startDate').required = false;
+        document.getElementById('endDate').required = false;
+    }
+});
+
+// Создание пользователя
+document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const lastName = document.getElementById('lastName').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    
+    // Проверка обязательных полей на клиенте
+    if (!lastName || !firstName) {
+        alert('Фамилия и имя обязательны для заполнения');
+        return;
+    }
+    
+    const formData = {
+        lastName: lastName,
+        firstName: firstName,
+        middleName: document.getElementById('middleName').value.trim(),
+        age: document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null
+    };
+    
+    console.log('📤 Отправка данных:', formData);
+    console.log('🌐 URL:', `${API_BASE}/users`);
+    
+    try {
+        const response = await fetch(`${API_BASE}/users`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        console.log('📥 Статус ответа:', response.status, response.statusText);
+        console.log('📥 Заголовки:', Object.fromEntries(response.headers.entries()));
+        
+        // Проверяем тип контента
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+            console.log('📥 JSON ответ:', data);
+        } else {
+            const text = await response.text();
+            console.error('❌ Ответ не JSON:', text);
+            throw new Error(`Сервер вернул не JSON. Статус: ${response.status}. Ответ: ${text.substring(0, 200)}`);
+        }
+        
+        if (response.ok) {
+            alert('✅ Пользователь успешно создан!');
+            document.getElementById('createUserForm').reset();
+            loadUsers();
+        } else {
+            // Показываем более детальную ошибку
+            const errorMsg = data.details 
+                ? `${data.error}: ${data.details}`
+                : data.error || `Ошибка ${response.status}: ${response.statusText}`;
+            alert('❌ Ошибка: ' + errorMsg);
+            console.error('❌ Ошибка создания пользователя:', data);
+        }
+    } catch (error) {
+        console.error('❌ Ошибка при запросе:', error);
+        console.error('❌ Тип ошибки:', error.name);
+        console.error('❌ Сообщение:', error.message);
+        console.error('❌ Stack:', error.stack);
+        
+        // Более детальные сообщения об ошибках
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            alert('❌ Ошибка подключения к серверу!\n\nПроверьте:\n1. Сервер запущен\n2. Правильный адрес: ' + window.location.origin + API_BASE + '/users\n3. Нет проблем с сетью\n\nОткройте консоль (F12) для деталей.');
+        } else if (error.name === 'SyntaxError') {
+            alert('❌ Ошибка: Сервер вернул некорректный ответ.\n\nПроверьте консоль (F12) для деталей.');
+        } else {
+            alert('❌ Ошибка: ' + error.message + '\n\nПроверьте консоль (F12) для деталей.');
+        }
+    }
+});
+
+// Выдача лицензии
+document.getElementById('issueLicenseForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const deviceId = document.getElementById('deviceSelect').value;
+    const userId = document.getElementById('userSelect').value; // Теперь это hidden input
+    const isSession = document.getElementById('isSessionCheck').checked;
+    
+    if (!deviceId || !userId) {
+        alert('Выберите устройство и пациента');
+        return;
+    }
+    
+    const formData = {
+        deviceId,
+        userId,
+        isSession
+    };
+    
+    if (!isSession) {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (!startDate || !endDate) {
+            alert('Укажите период для периодического доступа');
+            return;
+        }
+        
+        formData.startDate = startDate;
+        formData.endDate = endDate;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/licenses/issue-admin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            alert('Лицензия успешно выдана!');
+            document.getElementById('issueLicenseForm').reset();
+            document.getElementById('userSearchInput').value = '';
+            document.getElementById('userSelect').value = '';
+            document.getElementById('periodDates').style.display = 'none';
+            loadLicenses();
+        } else {
+            const error = await response.json();
+            alert('Ошибка: ' + (error.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Ошибка выдачи лицензии:', error);
+        alert('Ошибка выдачи лицензии');
+    }
+});
+
+// Загрузка лицензий
+async function loadLicenses() {
+    const tbody = document.getElementById('licensesTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Загрузка...</td></tr>';
+    
+    try {
+        const response = await fetch(`${API_BASE}/licenses/admin/all`);
+        const licenses = await response.json();
+        
+        if (licenses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Нет лицензий</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = licenses.map(license => {
+            const startDate = license.startDate 
+                ? new Date(license.startDate).toLocaleDateString('ru-RU')
+                : '-';
+            const endDate = license.endDate 
+                ? new Date(license.endDate).toLocaleDateString('ru-RU')
+                : '-';
+            
+            return `
+                <tr>
+                    <td>${license.code}</td>
+                    <td>${license.lastName || '-'}</td>
+                    <td>${license.firstName || '-'}</td>
+                    <td>${license.middleName || '-'}</td>
+                    <td>${license.type}</td>
+                    <td>${startDate}</td>
+                    <td>${endDate}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteLicense('${license._type}', '${license._id}')" title="Удалить">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Ошибка загрузки лицензий:', error);
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Ошибка загрузки лицензий</td></tr>';
+    }
+}
+
+// Удаление лицензии
+async function deleteLicense(type, id) {
+    if (!confirm('Вы уверены, что хотите удалить эту лицензию?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/licenses/admin/${type}/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert('Лицензия удалена');
+            loadLicenses();
+        } else {
+            const error = await response.json();
+            alert('Ошибка: ' + (error.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Ошибка удаления лицензии:', error);
+        alert('Ошибка удаления лицензии');
+    }
+}
+
+// Загрузка пользователей в таблицу
+async function loadUsersTable() {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка...</td></tr>';
+    
+    try {
+        const response = await fetch(`${API_BASE}/users`);
+        const users = await response.json();
+        
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Нет пользователей</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = users.map(user => {
+            const lastName = user.lastName || '-';
+            const firstName = user.firstName || '-';
+            const middleName = user.middleName || '-';
+            const age = user.age ? `${user.age} лет` : '-';
+            const status = user.isOnline 
+                ? '<span class="status-badge status-online">Онлайн</span>'
+                : '<span class="status-badge status-offline">Оффлайн</span>';
+            const lastSeen = user.lastSeen 
+                ? new Date(user.lastSeen).toLocaleString('ru-RU')
+                : 'Никогда';
+            
+            return `
+                <tr>
+                    <td>${lastName}</td>
+                    <td>${firstName}</td>
+                    <td>${middleName}</td>
+                    <td>${age}</td>
+                    <td>${status}</td>
+                    <td>${lastSeen}</td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteUser('${user._id}')" title="Удалить">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('Ошибка загрузки пользователей:', error);
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Ошибка загрузки пользователей</td></tr>';
+    }
+}
+
+// Переключение между вкладками таблиц
+function initTableTabs() {
+    const tabs = document.querySelectorAll('.table-tab');
+    const contents = document.querySelectorAll('.table-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.getAttribute('data-tab');
+            
+            // Убрать активный класс со всех вкладок и контента
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            
+            // Добавить активный класс к выбранной вкладке
+            tab.classList.add('active');
+            
+            // Показать соответствующий контент
+            const targetContent = document.getElementById(`${targetTab}Tab`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+                
+                // Загрузить данные при переключении
+                if (targetTab === 'licenses') {
+                    loadLicenses();
+                } else if (targetTab === 'users') {
+                    loadUsersTable();
+                }
+            }
+        });
+    });
+}
+
+// Удаление пользователя
+async function deleteUser(userId) {
+    if (!confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/users/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            alert('Пользователь удален');
+            loadUsersTable();
+            loadUsers(); // Обновить список в форме
+        } else {
+            const error = await response.json();
+            alert('Ошибка: ' + (error.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Ошибка удаления пользователя:', error);
+        alert('Ошибка удаления пользователя');
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    // Инициализация вкладок
+    initTableTabs();
+    
+    // Инициализация поиска пользователей
+    initUserSearch();
+    
+    // Загрузка данных
+    loadDevices();
+    loadUsers();
+    loadLicenses(); // Загружаем лицензии по умолчанию
+    
+    // Обновление каждые 30 секунд
+    setInterval(() => {
+        const activeTab = document.querySelector('.table-tab.active');
+        if (activeTab) {
+            const tabName = activeTab.getAttribute('data-tab');
+            if (tabName === 'licenses') {
+                loadLicenses();
+            } else if (tabName === 'users') {
+                loadUsersTable();
+            }
+        }
+        // Обновляем список пользователей для поиска
+        loadUsers();
+    }, 30000);
+});
+
+

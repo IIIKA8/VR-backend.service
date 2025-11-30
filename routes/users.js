@@ -1,0 +1,233 @@
+const express = require('express');
+const router = express.Router();
+const User = require('../models/User');
+
+// Middleware для логирования запросов к пользователям
+router.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(` [${timestamp}] Users API: ${req.method} ${req.path} - IP: ${req.ip}`);
+  next();
+});
+
+// Получить всех пользователей
+router.get('/', async (req, res) => {
+  try {
+    const users = await User.find().select('-__v').sort({ lastSeen: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка при получении пользователей' });
+  }
+});
+
+// Получить пользователя по ID
+router.get('/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-__v');
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка при получении пользователя' });
+  }
+});
+
+// Создать нового пользователя (с поддержкой ФИО и возраста)
+router.post('/', async (req, res) => {
+  try {
+    console.log(`➕ [${new Date().toISOString()}] Создание пользователя`);
+    console.log(`📦 Тело запроса:`, JSON.stringify(req.body, null, 2));
+    
+    // Проверка подключения к MongoDB
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB не подключен!');
+      return res.status(503).json({ 
+        error: 'База данных недоступна',
+        details: 'Проверьте подключение к MongoDB'
+      });
+    }
+    
+    // Поддерживаем формат из админки: lastName, firstName, middleName, age
+    const { lastName, firstName, middleName, age } = req.body;
+    
+    // Проверяем обязательные поля
+    if (!lastName || !firstName) {
+      console.log(`❌ Отсутствуют обязательные поля: lastName=${!!lastName}, firstName=${!!firstName}`);
+      return res.status(400).json({ 
+        error: 'Фамилия и имя обязательны для заполнения',
+        received: { lastName: !!lastName, firstName: !!firstName }
+      });
+    }
+    
+    // Генерируем уникальные username и email на основе ФИО
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substr(2, 6);
+    const baseUsername = `${lastName.toLowerCase()}_${firstName.toLowerCase()}_${timestamp}`;
+    const username = baseUsername.replace(/[^a-z0-9_]/g, '');
+    const email = `${username}@vr-app.local`;
+    
+    console.log(`🔧 Генерируемые данные: username=${username}, email=${email}`);
+    
+    // Проверяем уникальность username и email
+    let finalUsername = username;
+    let finalEmail = email;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const existingUser = await User.findOne({ 
+          $or: [{ username: finalUsername }, { email: finalEmail }] 
+        });
+        
+        if (!existingUser) {
+          break;
+        }
+        
+        console.log(`⚠️ Конфликт уникальности, попытка ${attempts + 1}`);
+        finalUsername = `${username}_${randomSuffix}_${attempts}`;
+        finalEmail = `${finalUsername}@vr-app.local`;
+        attempts++;
+      } catch (dbError) {
+        console.error('❌ Ошибка проверки уникальности:', dbError);
+        throw dbError;
+      }
+    }
+    
+    if (attempts >= maxAttempts) {
+      console.error(`❌ Не удалось создать уникальный username после ${maxAttempts} попыток`);
+      return res.status(500).json({ 
+        error: 'Не удалось создать уникального пользователя. Попробуйте еще раз.' 
+      });
+    }
+    
+    // Формируем полное имя
+    const fullName = [lastName, firstName, middleName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    
+    const userData = {
+      username: finalUsername,
+      email: finalEmail,
+      lastName: lastName.trim(),
+      firstName: firstName.trim(),
+      middleName: middleName ? middleName.trim() : '',
+      age: age ? parseInt(age) : null,
+      fullName: fullName
+    };
+    
+    console.log(`📝 Данные для создания:`, JSON.stringify(userData, null, 2));
+    
+    const user = new User(userData);
+    await user.save();
+    
+    console.log(`✅ Пользователь создан: ID=${user._id}, username=${user.username}`);
+    res.status(201).json(user);
+  } catch (error) {
+    console.error(`❌ [${new Date().toISOString()}] Ошибка создания пользователя:`);
+    console.error(`   Тип: ${error.name}`);
+    console.error(`   Сообщение: ${error.message}`);
+    console.error(`   Stack:`, error.stack);
+    
+    // Обработка различных типов ошибок
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0] || 'поле';
+      console.error(`❌ Дубликат в поле: ${field}`);
+      return res.status(400).json({ 
+        error: `Пользователь с таким ${field === 'username' ? 'именем пользователя' : field === 'email' ? 'email' : field} уже существует`,
+        details: error.message
+      });
+    }
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors || {}).map(err => err.message);
+      console.error(`❌ Ошибки валидации:`, messages);
+      return res.status(400).json({ 
+        error: 'Ошибка валидации', 
+        details: messages.join(', '),
+        errors: error.errors
+      });
+    }
+    
+    // Проверка подключения к MongoDB
+    if (error.name === 'MongoServerError' || error.message.includes('Mongo') || error.message.includes('connection')) {
+      console.error(`❌ Ошибка MongoDB:`, error.message);
+      return res.status(503).json({ 
+        error: 'Ошибка базы данных', 
+        details: 'Проверьте подключение к MongoDB',
+        message: error.message
+      });
+    }
+    
+    // Общая ошибка
+    return res.status(500).json({ 
+      error: 'Ошибка при создании пользователя', 
+      details: error.message,
+      type: error.name
+    });
+  }
+});
+
+// Обновить пользователя
+router.put('/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    ).select('-__v');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ error: 'Ошибка при обновлении пользователя' });
+  }
+});
+
+// Удалить пользователя
+router.delete('/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    res.json({ message: 'Пользователь удален' });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка при удалении пользователя' });
+  }
+});
+
+// Обновить статус онлайн
+router.patch('/:id/online', async (req, res) => {
+  try {
+    const isOnline = req.body.isOnline;
+    console.log(`🔄 [${new Date().toISOString()}] Обновление статуса пользователя ${req.params.id}: ${isOnline ? 'онлайн' : 'оффлайн'}`);
+    
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { 
+        isOnline: isOnline,
+        lastSeen: new Date()
+      },
+      { new: true }
+    ).select('-__v');
+    
+    if (!user) {
+      console.log(`⚠️ [${new Date().toISOString()}] Пользователь ${req.params.id} не найден`);
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    
+    console.log(`✅ [${new Date().toISOString()}] Статус пользователя ${user.username} обновлен`);
+    res.json(user);
+  } catch (error) {
+    console.error(`❌ [${new Date().toISOString()}] Ошибка обновления статуса:`, error);
+    res.status(400).json({ error: 'Ошибка при обновлении статуса' });
+  }
+});
+
+module.exports = router;

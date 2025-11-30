@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Доступ запрещён</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #232936;
+            color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .block {
+            background: #232936;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.22);
+            border-radius: 16px;
+            padding: 48px 36px;
+            text-align: center;
+        }
+        .block h1 { color: #e74c3c; margin-bottom: 18px; }
+        .block p { opacity: 0.85; }
+        .btn {
+            margin-top: 26px; padding: 12px 30px;
+            border: none; border-radius: 8px;
+            background: #34495e; color: #fff;
+            font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: .2s;
+        }
+        .btn:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <div class="block">
+        <h1>🔒 Нет доступа</h1>
+        <p>Для входа в админку требуется авторизация администратора.<br>
+        Пожалуйста, введите правильный пароль на форме входа.</p>
+        <button onclick="location.href='/'" class="btn">На главную</button>
+    </div>
+</body>
+</html>

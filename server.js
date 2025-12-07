@@ -25,12 +25,12 @@ app.use((req, res, next) => {
   const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
   const userAgent = req.get('User-Agent') || 'Unknown';
   
-  console.log(` [${timestamp}] ${req.method} ${req.path} - IP: ${clientIP} - User-Agent: ${userAgent}`);
+  //console.log(` [${timestamp}] ${req.method} ${req.path} - IP: ${clientIP} - User-Agent: ${userAgent}`);
   
   // Логируем тело запроса для POST/PUT/PATCH
-  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-    console.log(`📦 Body: ${JSON.stringify(req.body)}`);
-  }
+  //if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+  //  console.log(`📦 Body: ${JSON.stringify(req.body)}`);
+  //}
   
   next();
 });
@@ -56,10 +56,10 @@ app.use(cors());
 app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
 // ваш логгер запросов ДАЛЬШЕ, чтобы req.body уже был распарсен
-app.use((req,res,next)=>{ 
-  console.log('Body:', req.body); 
-  next();
-});
+//app.use((req,res,next)=>{ 
+//  console.log('Body:', req.body); 
+//  next();
+//});
 
 // Обработка ошибок парсинга JSON (ПЕРЕД маршрутами)
 app.use((error, req, res, next) => {
@@ -115,52 +115,52 @@ wss.on('connection', (ws, req) => {
   const timestamp = new Date().toISOString();
   const connectionId = Math.random().toString(36).substr(2, 9);
   
-  console.log(`🔌 [${timestamp}] VR клиент подключен - ID: ${connectionId} - IP: ${clientIP}`);
+//  console.log(`🔌 [${timestamp}] VR клиент подключен - ID: ${connectionId} - IP: ${clientIP}`);
   
   // Отправляем приветственное сообщение
   ws.send('Добро пожаловать в VR сервер!');
   
   ws.on('message', (msg) => {
     const message = msg.toString();
-    console.log(`📨 [${timestamp}] Сообщение от ${connectionId}: ${message}`);
+//    console.log(`📨 [${timestamp}] Сообщение от ${connectionId}: ${message}`);
     
     // Парсим JSON сообщения
-    try {
-      const data = JSON.parse(message);
-      console.log(`📊 [${timestamp}] JSON данные от ${connectionId}:`, data);
+    //try {
+      //const data = JSON.parse(message);
+      //console.log(`📊 [${timestamp}] JSON данные от ${connectionId}:`, data);
       
       // Логируем специфичные типы сообщений
-      if (data.type) {
-        switch (data.type) {
-          case 'user_data':
-            console.log(`👤 [${timestamp}] Данные пользователя от ${connectionId}: ${data.username}`);
-            break;
-          case 'position_update':
-            console.log(` [${timestamp}] Позиция от ${connectionId}: x=${data.position?.x}, y=${data.position?.y}, z=${data.position?.z}`);
-            break;
-          case 'scene_change':
-            console.log(`🎬 [${timestamp}] Смена сцены от ${connectionId}: ${data.from_scene} → ${data.to_scene}`);
-            break;
-          case 'controller_update':
-            console.log(`🎮 [${timestamp}] Контроллер ${data.controller_id} от ${connectionId}`);
-            break;
-        }
-      }
-    } catch (e) {
-      console.log(`📝 [${timestamp}] Текстовое сообщение от ${connectionId}: ${message}`);
-    }
+      //if (data.type) {
+      //  switch (data.type) {
+      //    case 'user_data':
+      //      console.log(`👤 [${timestamp}] Данные пользователя от ${connectionId}: ${data.username}`);
+      //      break;
+      //    case 'position_update':
+      //      console.log(` [${timestamp}] Позиция от ${connectionId}: x=${data.position?.x}, y=${data.position?.y}, z=${data.position?.z}`);
+      //      break;
+      //    case 'scene_change':
+      //      console.log(`🎬 [${timestamp}] Смена сцены от ${connectionId}: ${data.from_scene} → ${data.to_scene}`);
+      //      break;
+      //    case 'controller_update':
+      //      console.log(`🎮 [${timestamp}] Контроллер ${data.controller_id} от ${connectionId}`);
+      //      break;
+      //  }
+      //}
+    //} catch (e) {
+    //  console.log(`📝 [${timestamp}] Текстовое сообщение от ${connectionId}: ${message}`);
+    //}
     
     // Отправляем эхо
-    ws.send('Эхо: ' + message);
+    //ws.send('Эхо: ' + message);
   });
 
-  ws.on('close', (code, reason) => {
-    console.log(`🔌 [${timestamp}] VR клиент отключен - ID: ${connectionId} - Код: ${code} - Причина: ${reason}`);
-  });
+  //ws.on('close', (code, reason) => {
+  //  console.log(`🔌 [${timestamp}] VR клиент отключен - ID: ${connectionId} - Код: ${code} - Причина: ${reason}`);
+  //});
   
-  ws.on('error', (error) => {
-    console.error(`❌ [${timestamp}] WebSocket ошибка от ${connectionId}:`, error);
-  });
+  //ws.on('error', (error) => {
+  //  console.error(`❌ [${timestamp}] WebSocket ошибка от ${connectionId}:`, error);
+  //});
 });
 
 // Подключение маршрутов
@@ -212,7 +212,7 @@ function adminGuard(req, res, next) {
 // --- Использование защиты --- //
 // Защищаем html (админка)
 app.get('/admin', (req, res) => {
-  console.log('📄 Запрос страницы админки');
+  //console.log('📄 Запрос страницы админки');
   res.sendFile(path.join(__dirname, 'web/views/admin.html'));
 });
 // (можно добавить аналогичную защиту для других admin страниц)
@@ -223,7 +223,7 @@ app.use('/api/admin', adminGuard);
 // Health check endpoint (добавляем в API)
 app.get('/api/health', (req, res) => {
   const timestamp = new Date().toISOString();
-  console.log(`❤️ [${timestamp}] Health check - IP: ${req.ip}`);
+  //console.log(`❤️ [${timestamp}] Health check - IP: ${req.ip}`);
   
   res.json({
     status: 'OK',
@@ -236,7 +236,7 @@ app.get('/api/health', (req, res) => {
 // Старый health endpoint для обратной совместимости
 app.get('/health', (req, res) => {
   const timestamp = new Date().toISOString();
-  console.log(`❤️ [${timestamp}] Health check - IP: ${req.ip}`);
+  //console.log(`❤️ [${timestamp}] Health check - IP: ${req.ip}`);
   
   res.json({
     status: 'OK',
@@ -292,13 +292,13 @@ app.use('/static', express.static(path.join(__dirname, 'web/static'), {
 
 // Логирование запросов к статике (для отладки)
 app.use('/static', (req, res, next) => {
-  console.log(`📁 Статический файл: ${req.path}`);
+  //console.log(`📁 Статический файл: ${req.path}`);
   next();
 });
 
 // главная страница дашборда
 app.get('/', (req, res) => {
-  console.log('📄 Запрос главной страницы');
+  //console.log('📄 Запрос главной страницы');
   res.sendFile(path.join(__dirname, 'web/views/index.html'));
 });
 
@@ -378,6 +378,6 @@ const SERVER_IP = process.env.SERVER_IP || '0.0.0.0';
 server.listen(PORT, SERVER_IP, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
   console.log(`📊 Дашборд: http://${SERVER_IP}:${PORT}`);
-  console.log(`🔌 WebSocket: ws://${SERVER_IP}:${PORT}`);
+  //console.log(`🔌 WebSocket: ws://${SERVER_IP}:${PORT}`);
   console.log(`🌐 API: http://${SERVER_IP}:${PORT}/api`);
 });

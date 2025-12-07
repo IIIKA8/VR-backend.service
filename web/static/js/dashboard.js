@@ -145,8 +145,8 @@ async function refreshAll() {
 document.addEventListener('DOMContentLoaded', () => {
     refreshAll();
     
-    // Автообновление каждые 10 секунд
-    setInterval(refreshAll, 10000);
+    // Автообновление каждые 30 секунд
+    setInterval(refreshAll, 30000);
 });
 
 

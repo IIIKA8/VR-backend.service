@@ -74,6 +74,26 @@ const userSchema = new mongoose.Schema({
   isOnline: {
     type: Boolean,
     default: false
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+    select: false
+  },
+  isDoctor: {
+    type: Boolean,
+    default: false,
+    select: false
+  },
+  passwordHash: {
+    type: String,
+    default: null,
+    select: false
+  },
+  passwordSalt: {
+    type: String,
+    default: null,
+    select: false
   }
 }, {
   timestamps: true,

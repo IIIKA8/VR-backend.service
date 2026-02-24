@@ -1,8 +1,57 @@
 const API_BASE = '/api';
 
+// Статус авторизации пользователя в хедере
+async function updateAuthUi() {
+    const badge = document.getElementById('authUserBadge');
+    const actionBtn = document.getElementById('authActionBtn');
+    const toggle = document.getElementById('userMenuToggle');
+    const dropdown = document.getElementById('userMenuDropdown');
+    if (!badge || !actionBtn) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/status`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.authenticated) {
+            const name = data.user?.username || data.user?.email || 'Пользователь';
+            badge.textContent = `Вы вошли как: ${name}`;
+            actionBtn.textContent = 'Выйти';
+            actionBtn.href = '#';
+            actionBtn.onclick = async (e) => {
+                e.preventDefault();
+                await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                window.location.href = '/';
+            };
+        } else {
+            badge.textContent = 'Гость';
+            actionBtn.textContent = 'Вход';
+            actionBtn.href = '/auth';
+            actionBtn.onclick = null;
+        }
+
+        if (toggle && dropdown) {
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                dropdown.classList.toggle('open');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.user-menu')) {
+                    dropdown.classList.remove('open');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка проверки авторизации:', error);
+    }
+}
+
 // --- Авторизация админки --- //
 document.addEventListener('DOMContentLoaded', async function() {
+    updateAuthUi();
     const modal = document.getElementById('adminLoginModal');
+    const loginInput = document.getElementById('adminLoginInput');
     const input = document.getElementById('adminPasswordInput');
     const btn = document.getElementById('adminLoginBtn');
     const err = document.getElementById('adminLoginError');
@@ -25,19 +74,24 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     btn.onclick = async function() {
         err.textContent = '';
+        const login = loginInput.value.trim();
         const password = input.value;
+        if (!login || !password) {
+            err.textContent = 'Введите логин и пароль';
+            return;
+        }
         const res = await fetch('/api/admin/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ password })
+            body: JSON.stringify({ login, password })
         });
         if (res.ok) {
             modal.style.display = 'none';
             pageContent.style.filter = '';
             window.location.reload();
         } else {
-            err.textContent = 'Неверный пароль или нет доступа!';
+            err.textContent = 'Неверные данные или нет доступа!';
             input.value = '';
         }
     };

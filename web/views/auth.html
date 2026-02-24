@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Backend - Авторизация</title>
+    <link rel="stylesheet" href="/static/css/auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <header class="auth-header">
+            <h1>VR Backend - Авторизация</h1>
+            <nav class="nav-tabs">
+                <div class="user-menu">
+                    <button id="userMenuToggle" class="user-menu-toggle" type="button">
+                        <span id="authUserBadge">Гость</span>
+                        <span class="caret">▾</span>
+                    </button>
+                    <div id="userMenuDropdown" class="user-menu-dropdown">
+                        <a href="/" class="user-menu-item">Дашборд</a>
+                        <a href="/admin" class="user-menu-item">Админка</a>
+                        <a href="/auth" class="user-menu-item" id="authActionBtn">Вход</a>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <div class="auth-card">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Вход</button>
+                <button class="auth-tab" data-tab="register">Регистрация</button>
+            </div>
+
+            <div class="auth-content">
+                <form id="loginForm" class="auth-form active">
+                    <div class="form-group">
+                        <label for="loginValue">Email или username</label>
+                        <input type="text" id="loginValue" class="form-control" autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Пароль</label>
+                        <input type="password" id="loginPassword" class="form-control" autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Войти</button>
+                    <div id="loginMessage" class="form-message"></div>
+                </form>
+
+                <form id="registerForm" class="auth-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="registerEmail">Email</label>
+                            <input type="email" id="registerEmail" class="form-control" autocomplete="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerUsername">Username</label>
+                            <input type="text" id="registerUsername" class="form-control" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="registerLastName">Фамилия</label>
+                            <input type="text" id="registerLastName" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerFirstName">Имя</label>
+                            <input type="text" id="registerFirstName" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerMiddleName">Отчество</label>
+                            <input type="text" id="registerMiddleName" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="registerAge">Возраст</label>
+                            <input type="number" id="registerAge" class="form-control" min="1" max="120">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Пароль</label>
+                            <input type="password" id="registerPassword" class="form-control" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+                    <div id="registerMessage" class="form-message"></div>
+                </form>
+            </div>
+            <div id="authLoggedBlock" class="auth-logged" style="display: none;">
+                <div class="auth-logged-text">
+                    Вы вошли как <span id="authLoggedName"></span>
+                </div>
+                <button id="authLogoutBtn" class="btn btn-primary">Выйти</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/auth.js" defer></script>
+</body>
+</html>

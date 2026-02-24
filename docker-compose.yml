@@ -1,0 +1,49 @@
+# VR Backend — запуск приложения и MongoDB в контейнерах
+# Запуск: docker compose up -d
+# Остановка: docker compose down
+# Логи: docker compose logs -f app
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vr-backend:latest
+    container_name: vr-backend-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 8080
+      SERVER_IP: 0.0.0.0
+      MONGODB_URI: mongodb://mongodb:27017/vr-app
+      SESS_SECRET: ${SESS_SECRET:-change-me-in-production}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  mongodb:
+    image: mongo:7
+    container_name: vr-backend-mongodb
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: vr-app
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  mongodb_data:

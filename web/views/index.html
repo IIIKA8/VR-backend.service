@@ -11,8 +11,17 @@
         <header class="dashboard-header">
             <h1>VR Backend - Дашборд</h1>
             <nav class="nav-tabs">
-                <a href="/" class="nav-tab active">Дашборд</a>
-                <a href="/admin" class="nav-tab">Админка</a>
+                <div class="user-menu">
+                    <button id="userMenuToggle" class="user-menu-toggle" type="button">
+                        <span id="authUserBadge">Гость</span>
+                        <span class="caret">▾</span>
+                    </button>
+                    <div id="userMenuDropdown" class="user-menu-dropdown">
+                        <a href="/" class="user-menu-item">Дашборд</a>
+                        <a href="/admin" class="user-menu-item">Админка</a>
+                        <a href="/auth" class="user-menu-item" id="authActionBtn">Вход</a>
+                    </div>
+                </div>
             </nav>
         </header>
 

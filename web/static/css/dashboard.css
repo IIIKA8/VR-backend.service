@@ -43,6 +43,7 @@ body {
 .nav-tabs {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .nav-tab {
@@ -65,6 +66,61 @@ body {
 .nav-tab.active {
     background: #3498db;
     color: white;
+}
+
+.user-menu {
+    position: relative;
+}
+
+.user-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #e2e8f0;
+    color: #1f2937;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.user-menu-toggle .caret {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border: 1px solid #e5e7eb;
+    min-width: 180px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 10;
+}
+
+.user-menu-dropdown.open {
+    display: flex;
+}
+
+.user-menu-item {
+    padding: 10px 14px;
+    color: #1f2937;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    background: white;
+}
+
+.user-menu-item:hover {
+    background: #f3f4f6;
 }
 
 .stats-grid {

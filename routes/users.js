@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const { verboseLog } = require('../util/logger');
 
-// Middleware для логирования запросов к пользователям
+// Middleware для логирования запросов (только в dev / при LOG_VERBOSE=1)
 router.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(` [${timestamp}] Users API: ${req.method} ${req.path} - IP: ${req.ip}`);
+  verboseLog(` [${new Date().toISOString()}] Users API: ${req.method} ${req.path} - IP: ${req.ip}`);
   next();
 });
 
@@ -35,8 +35,8 @@ router.get('/:id', async (req, res) => {
 // Создать нового пользователя (с поддержкой ФИО и возраста)
 router.post('/', async (req, res) => {
   try {
-    console.log(`➕ [${new Date().toISOString()}] Создание пользователя`);
-    console.log(`📦 Тело запроса:`, JSON.stringify(req.body, null, 2));
+    verboseLog(`➕ [${new Date().toISOString()}] Создание пользователя`);
+    verboseLog(`📦 Тело запроса:`, JSON.stringify(req.body, null, 2));
     
     // Проверка подключения к MongoDB
     const mongoose = require('mongoose');
@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
     
     // Проверяем обязательные поля
     if (!lastName || !firstName) {
-      console.log(`❌ Отсутствуют обязательные поля: lastName=${!!lastName}, firstName=${!!firstName}`);
+      verboseLog(`❌ Отсутствуют обязательные поля: lastName=${!!lastName}, firstName=${!!firstName}`);
       return res.status(400).json({ 
         error: 'Фамилия и имя обязательны для заполнения',
         received: { lastName: !!lastName, firstName: !!firstName }
@@ -67,7 +67,7 @@ router.post('/', async (req, res) => {
     const username = baseUsername.replace(/[^a-z0-9_]/g, '');
     const email = `${username}@vr-app.local`;
     
-    console.log(`🔧 Генерируемые данные: username=${username}, email=${email}`);
+    verboseLog(`🔧 Генерируемые данные: username=${username}, email=${email}`);
     
     // Проверяем уникальность username и email
     let finalUsername = username;
@@ -85,7 +85,7 @@ router.post('/', async (req, res) => {
           break;
         }
         
-        console.log(`⚠️ Конфликт уникальности, попытка ${attempts + 1}`);
+        verboseLog(`⚠️ Конфликт уникальности, попытка ${attempts + 1}`);
         finalUsername = `${username}_${randomSuffix}_${attempts}`;
         finalEmail = `${finalUsername}@vr-app.local`;
         attempts++;
@@ -118,12 +118,12 @@ router.post('/', async (req, res) => {
       fullName: fullName
     };
     
-    console.log(`📝 Данные для создания:`, JSON.stringify(userData, null, 2));
+    verboseLog(`📝 Данные для создания:`, JSON.stringify(userData, null, 2));
     
     const user = new User(userData);
     await user.save();
     
-    console.log(`✅ Пользователь создан: ID=${user._id}, username=${user.username}`);
+    verboseLog(`✅ Пользователь создан: ID=${user._id}, username=${user.username}`);
     res.status(201).json(user);
   } catch (error) {
     console.error(`❌ [${new Date().toISOString()}] Ошибка создания пользователя:`);
@@ -206,7 +206,7 @@ router.delete('/:id', async (req, res) => {
 router.patch('/:id/online', async (req, res) => {
   try {
     const isOnline = req.body.isOnline;
-    console.log(`🔄 [${new Date().toISOString()}] Обновление статуса пользователя ${req.params.id}: ${isOnline ? 'онлайн' : 'оффлайн'}`);
+    verboseLog(`🔄 [${new Date().toISOString()}] Обновление статуса пользователя ${req.params.id}: ${isOnline ? 'онлайн' : 'оффлайн'}`);
     
     const user = await User.findByIdAndUpdate(
       req.params.id,

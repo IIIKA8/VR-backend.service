@@ -1,5 +1,52 @@
 const API_BASE = '/api';
 
+// Статус авторизации пользователя
+async function updateAuthUi() {
+    const badge = document.getElementById('authUserBadge');
+    const actionBtn = document.getElementById('authActionBtn');
+    const toggle = document.getElementById('userMenuToggle');
+    const dropdown = document.getElementById('userMenuDropdown');
+    if (!badge || !actionBtn) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/auth/status`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (data.authenticated) {
+            const name = data.user?.username || data.user?.email || 'Пользователь';
+            badge.textContent = `Вы вошли как: ${name}`;
+            actionBtn.textContent = 'Выйти';
+            actionBtn.href = '#';
+            actionBtn.onclick = async (e) => {
+                e.preventDefault();
+                await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                window.location.reload();
+            };
+        } else {
+            badge.textContent = 'Гость';
+            actionBtn.textContent = 'Вход';
+            actionBtn.href = '/auth';
+            actionBtn.onclick = null;
+        }
+
+        if (toggle && dropdown) {
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                dropdown.classList.toggle('open');
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.user-menu')) {
+                    dropdown.classList.remove('open');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка проверки авторизации:', error);
+    }
+}
+
 // Загрузка статистики
 async function loadStats() {
     try {
@@ -143,6 +190,7 @@ async function refreshAll() {
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
+    updateAuthUi();
     refreshAll();
     
     // Автообновление каждые 30 секунд

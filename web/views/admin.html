@@ -10,7 +10,8 @@
     <div id="adminLoginModal" class="modal" style="display: flex;">
         <div class="modal-content">
             <h2>Вход в админку</h2>
-            <input type="password" id="adminPasswordInput" class="form-control" placeholder="Пароль администратора">
+            <input type="text" id="adminLoginInput" class="form-control" placeholder="Email или username">
+            <input type="password" id="adminPasswordInput" class="form-control" placeholder="Пароль">
             <button id="adminLoginBtn" class="btn btn-primary">Войти</button>
             <div id="adminLoginError" class="login-error"></div>
         </div>
@@ -20,8 +21,17 @@
         <header class="admin-header">
             <h1 class="title">VR Backend - Админка</h1>
             <nav class="nav-tabs">
-                <a href="/" class="nav-tab">Дашборд</a>
-                <a href="/admin" class="nav-tab active">Админка</a>
+                <div class="user-menu">
+                    <button id="userMenuToggle" class="user-menu-toggle" type="button">
+                        <span id="authUserBadge">Гость</span>
+                        <span class="caret">▾</span>
+                    </button>
+                    <div id="userMenuDropdown" class="user-menu-dropdown">
+                        <a href="/" class="user-menu-item">Дашборд</a>
+                        <a href="/admin" class="user-menu-item">Админка</a>
+                        <a href="/auth" class="user-menu-item" id="authActionBtn">Вход</a>
+                    </div>
+                </div>
             </nav>
         </header>
         

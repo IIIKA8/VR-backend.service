@@ -5,6 +5,7 @@ const WebSocket = require('ws');
 const cors = require('cors');
 const path = require('path');
 const { Types } = require('mongoose');
+const crypto = require('crypto');
 const isObjectId = (v) => Types.ObjectId.isValid(v);
 const session = require('express-session');
 
@@ -37,6 +38,11 @@ app.use((req, res, next) => {
 
 // Подключаем dotenv для переменных окружения (лучше пусть будет до всех middleware)
 require('dotenv').config();
+
+// За прокси (Nginx, Traefik): правильные req.ip и req.hostname на новой машине
+if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
 
 // --- СНАЧАЛА session! --- // (ПЕРЕД остальными middleware!)
 app.use(session({
@@ -163,6 +169,9 @@ wss.on('connection', (ws, req) => {
   //});
 });
 
+// Подключение моделей (нужно для авторизации и статистики)
+const User = require('./models/User');
+
 // Подключение маршрутов
 const userRoutes = require('./routes/users');
 const sceneRoutes = require('./routes/scenes');
@@ -170,50 +179,145 @@ const sessionRoutes = require('./routes/sessions');
 const licenseRoutes = require('./routes/licenses');
 const deviceRoutes = require('./routes/devices');
 const usagePeriodRoutes = require('./routes/usagePeriods');
+const authRoutes = require('./routes/auth');
 
 // API маршруты ПЕРЕД статикой
 app.use('/api/users', userRoutes);
 app.use('/api/scenes', sceneRoutes);
 app.use('/api/sessions', sessionRoutes);
-app.use('/api/licenses', licenseRoutes);
+app.use('/api/licenses', (req, res, next) => {
+  const adminPrefixes = ['/issue-admin', '/admin', '/purge'];
+  if (adminPrefixes.some((prefix) => req.path.startsWith(prefix))) {
+    return adminGuard(req, res, next);
+  }
+  return next();
+}, licenseRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/usage-periods', usagePeriodRoutes);
+app.use('/api/auth', authRoutes);
 
 // --- API авторизации админки --- //
-// Эндпоинт статуса ДОЛЖЕН быть ПЕРЕД adminGuard, чтобы быть доступным без авторизации
-app.get('/api/admin/status', (req, res) => {
-  res.json({ isAdmin: !!(req.session && req.session.isAdmin) });
-});
+const PASSWORD_KEYLEN = 64;
 
-app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body || {};
-  if (password === 'BIM_local123') {
-    req.session.isAdmin = true;
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ success: false, error: 'Неверный пароль' });
+function hashPassword(password, salt) {
+  return crypto.scryptSync(password, salt, PASSWORD_KEYLEN).toString('hex');
+}
+
+function verifyPassword(password, salt, hash) {
+  if (!password || !salt || !hash) return false;
+  const computed = hashPassword(password, salt);
+  const computedBuf = Buffer.from(computed, 'hex');
+  const hashBuf = Buffer.from(hash, 'hex');
+  if (computedBuf.length !== hashBuf.length) return false;
+  return crypto.timingSafeEqual(computedBuf, hashBuf);
+}
+
+// Эндпоинт статуса ДОЛЖЕН быть ПЕРЕД adminGuard, чтобы быть доступным без авторизации
+app.get('/api/admin/status', async (req, res) => {
+  try {
+    const adminUserId = req.session?.adminUserId;
+    if (!adminUserId) {
+      return res.json({ isAdmin: false });
+    }
+    const adminUser = await User.findById(adminUserId).select('isAdmin');
+    if (!adminUser || !adminUser.isAdmin) {
+      req.session.isAdmin = false;
+      req.session.adminUserId = null;
+      return res.json({ isAdmin: false });
+    }
+    return res.json({ isAdmin: true });
+  } catch (error) {
+    console.error('Ошибка проверки статуса админа:', error);
+    return res.status(500).json({ error: 'Ошибка проверки статуса админа' });
   }
 });
+
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { login, password } = req.body || {};
+    const loginValue = (login || '').trim();
+    if (!loginValue || !password) {
+      return res.status(400).json({ success: false, error: 'Логин и пароль обязательны' });
+    }
+    const loginLower = loginValue.toLowerCase();
+    const user = await User.findOne({
+      $or: [{ username: loginValue }, { email: loginLower }]
+    }).select('+passwordHash +passwordSalt +isAdmin');
+    if (!user || !user.isAdmin) {
+      return res.status(401).json({ success: false, error: 'Неверные учетные данные или нет доступа' });
+    }
+    if (!verifyPassword(password, user.passwordSalt, user.passwordHash)) {
+      return res.status(401).json({ success: false, error: 'Неверные учетные данные или нет доступа' });
+    }
+    req.session.isAdmin = true;
+    req.session.adminUserId = user._id.toString();
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка входа в админку:', error);
+    return res.status(500).json({ success: false, error: 'Ошибка авторизации' });
+  }
+});
+
 app.post('/api/admin/logout', (req, res) => {
-  req.session.destroy(()=>{});
+  req.session.destroy(() => {});
   res.json({ success: true });
 });
 
 // Middleware для защиты админки и API админа (перед раздачей /admin)
-function adminGuard(req, res, next) {
-  if (req.session && req.session.isAdmin) return next();
-  if (req.path.startsWith('/api')) {
+async function adminGuard(req, res, next) {
+  try {
+    const isApiRequest = req.originalUrl.startsWith('/api');
+    const adminUserId = req.session?.adminUserId;
+    if (!adminUserId) {
+      if (isApiRequest) {
+        return res.status(401).json({ error: 'Нет доступа. Требуется авторизация администратора.' });
+      }
+      return res.redirect('/auth?next=/admin');
+    }
+    const adminUser = await User.findById(adminUserId).select('isAdmin');
+    if (!adminUser || !adminUser.isAdmin) {
+      req.session.destroy(() => {});
+      if (isApiRequest) {
     return res.status(401).json({ error: 'Нет доступа. Требуется авторизация администратора.' });
-  } else {
-    return res.sendFile(path.join(__dirname, 'web/views/admin_login_blocked.html'));
+      }
+      return res.redirect('/auth?next=/admin');
+    }
+    return next();
+  } catch (error) {
+    console.error('Ошибка проверки доступа админа:', error);
+    return res.status(500).json({ error: 'Ошибка проверки доступа' });
+  }
+}
+
+// Middleware: страница статистики пациента — только врач или админ
+async function patientStatsGuard(req, res, next) {
+  try {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.redirect('/auth?next=/patient-stats');
+    }
+    const user = await User.findById(userId).select('isAdmin isDoctor');
+    if (!user || (!user.isAdmin && !user.isDoctor)) {
+      return res.redirect('/auth?next=/patient-stats');
+    }
+    return next();
+  } catch (error) {
+    console.error('Ошибка проверки доступа к статистике пациента:', error);
+    return res.redirect('/auth?next=/patient-stats');
   }
 }
 
 // --- Использование защиты --- //
 // Защищаем html (админка)
-app.get('/admin', (req, res) => {
+app.get('/admin', adminGuard, (req, res) => {
   //console.log('📄 Запрос страницы админки');
   res.sendFile(path.join(__dirname, 'web/views/admin.html'));
+});
+app.get('/auth', (req, res) => {
+  res.sendFile(path.join(__dirname, 'web/views/auth.html'));
+});
+app.get('/patient-stats', patientStatsGuard, (req, res) => {
+  res.sendFile(path.join(__dirname, 'web/views/patient_stats.html'));
 });
 // (можно добавить аналогичную защиту для других admin страниц)
 
@@ -247,7 +351,6 @@ app.get('/health', (req, res) => {
 });
 
 // Подключение моделей для статистики (ПЕРЕД маршрутом stats)
-const User = require('./models/User');
 const VRScene = require('./models/VRScene');
 const VRSession = require('./models/VRSession');
 const License = require('./models/License');

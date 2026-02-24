@@ -35,6 +35,59 @@ curl http://localhost:8080/api/health
 
 Если приложение стоит за reverse proxy (Nginx, Traefik) на новой машине, задайте `TRUST_PROXY=1`, чтобы логи и сессии видели реальный IP и Host.
 
+## Публикация образа и развёртывание без исходников
+
+Чтобы на новом сервере **не клонировать репозиторий**, а только скачать образ с Docker Hub:
+
+### 1. Один раз: собрать и опубликовать образ (на машине с исходниками)
+
+```bash
+# Регистрация на https://hub.docker.com и вход
+docker login
+
+# Сборка образа (пример: leshien/vr-backend-web-app)
+docker build -t leshien/vr-backend-web-app:latest .
+
+# Публикация на Docker Hub
+docker push leshien/vr-backend-web-app:latest
+```
+
+### 2. На новом сервере: развернуть только из образа
+
+Исходный код не нужен. Нужны только Docker, Docker Compose и два файла из папки **deploy/** этого репозитория:
+
+- `deploy/docker-compose.yml`
+- `deploy/.env.example` → скопировать в `.env` и заполнить
+
+**Вариант А — скопировать только папку deploy:**
+
+```bash
+# На новом сервере (или скачайте deploy/ с GitHub вручную)
+mkdir -p /opt/vr-backend && cd /opt/vr-backend
+# Вставьте сюда содержимое deploy/docker-compose.yml в файл docker-compose.yml
+# Создайте .env из deploy/.env.example
+
+# В .env задайте:
+# DOCKER_IMAGE=leshien/vr-backend-web-app:latest
+# SESS_SECRET=ваш-секрет-не-короче-32-символов
+
+docker compose up -d
+```
+
+**Вариант Б — клонировать репозиторий только ради deploy:**
+
+```bash
+git clone https://github.com/ВАШ_ЛОГИН/vr-backend.git
+cd vr-backend/deploy
+cp .env.example .env
+# Отредактируйте .env: DOCKER_IMAGE и SESS_SECRET
+docker compose up -d
+```
+
+После `docker compose up -d` образ приложения и MongoDB скачаются с Docker Hub, контейнеры запустятся. Дашборд: `http://IP_СЕРВЕРА:8080`.
+
+---
+
 ## Перенос на другой сервер
 
 1. Скопируйте на новый сервер:

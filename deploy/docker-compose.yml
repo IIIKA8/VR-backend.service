@@ -27,7 +27,7 @@ services:
       start_period: 15s
 
   mongodb:
-    image: mongo:7
+    image: mongo:4.4
     container_name: vr-backend-mongodb
     restart: unless-stopped
     volumes:
@@ -35,7 +35,7 @@ services:
     environment:
       MONGO_INITDB_DATABASE: vr-app
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5

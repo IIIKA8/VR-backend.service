@@ -1,5 +1,5 @@
 # Развёртывание только из образов Docker (без исходного кода)
-# Заполните .env: DOCKER_IMAGE=ВАШ_ЛОГИН/vr-backend:latest, SESS_SECRET=...
+# Заполните .env: DOCKER_IMAGE=leshien/vr-backend-web-app:latest, SESS_SECRET=...
 # Запуск: docker compose up -d
 
 services:

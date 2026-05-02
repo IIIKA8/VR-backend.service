@@ -20,10 +20,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      MONGO_HOST: mongodb
-      MONGO_DB: vr-app
-      MONGO_USER: ${MONGO_USER:?Задайте MONGO_USER в .env}
-      MONGO_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
+      # Как раньше: без логина к Mongo внутри сети compose (Compass с ПК — через SSH на 127.0.0.1:27017, без auth)
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/vr-app}
       SESS_SECRET: ${SESS_SECRET:?Задайте SESS_SECRET в .env}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:
@@ -47,14 +45,8 @@ services:
       - mongodb_data:/data/db
     environment:
       MONGO_INITDB_DATABASE: vr-app
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?}
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'mongo -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 })" --quiet || exit 1',
-        ]
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5

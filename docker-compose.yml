@@ -17,10 +17,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      MONGO_HOST: mongodb
-      MONGO_DB: vr-app
-      MONGO_USER: ${MONGO_USER:-}
-      MONGO_PASSWORD: ${MONGO_PASSWORD:-}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/vr-app}
       SESS_SECRET: ${SESS_SECRET:-change-me-in-production}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:

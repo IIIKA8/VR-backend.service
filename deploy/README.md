@@ -61,17 +61,9 @@ cd /opt/vr-backend
 
 ### MongoDB и Compass
 
-Задайте **`MONGO_USER`** и **`MONGO_PASSWORD`** в `.env` — они создают **root** в Mongo при **первой** инициализации тома и используются приложением.
+По умолчанию в compose приложение подключается так: **`mongodb://mongodb:27017/vr-app`** (без логина внутри сети Docker).
 
-В **MongoDB Compass** (через SSH-туннель на `127.0.0.1:27017`): **Authentication → Username/Password**, пользователь и пароль как в `.env`, **Authentication Database** = **`admin`**.
-
-Если раньше Mongo работала **без пароля**, новый root при уже существующем томе **может не создаться**. Тогда либо заведите пользователя вручную в `mongosh`, либо **осознанно** очистите том (данные пропадут):
-
-```bash
-docker compose down
-docker volume rm deploy_mongodb_data   # только если бэкап не нужен
-docker compose up -d
-```
+С **ПК** в Compass: SSH-туннель на сервер, затем подключение к **`127.0.0.1:27017`**, **без** Authentication (как раньше). Если в томе Mongo уже включали пользователей с паролем, может понадобиться вход — или задайте **`MONGODB_URI`** в `.env` (см. `.env.example`).
 
 ---
 
@@ -89,7 +81,7 @@ nano .env
 |-------------------|----------|
 | `DOCKER_IMAGE`    | Полный URL образа из GHCR (см. шаг 1). |
 | `SESS_SECRET`     | Длинная случайная строка (например `openssl rand -hex 32`). |
-| `MONGO_USER` / `MONGO_PASSWORD` | Обязательны: root Mongo и вход приложения в БД (Compass: auth DB **admin**). |
+| `MONGODB_URI`     | Опционально; если не задан — `mongodb://mongodb:27017/vr-app` без пароля. |
 
 Сохраните файл. Файл **`.env` не коммитьте** — он только на сервере.
 

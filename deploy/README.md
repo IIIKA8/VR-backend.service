@@ -21,18 +21,37 @@
 
 ## 2. Файлы на сервере
 
-На VPS в одной папке должны лежать **`docker-compose.yml`**, **`.env`** и рядом **`Dockerfile` не нужен** — только compose и env.
+### Что Git реально копирует
 
-**Вариант A — полный clone и переход в deploy:**
+`git clone` скачивает **только то, что лежит в репозитории на GitHub** — это не «весь ваш компьютер».
+
+- **Не попадёт на сервер:** `godot/`, `node_modules/`, `.env` и всё, что в **`.gitignore`** — этих папок **нет в репозитории**, Git их не хранит и не клонирует.
+- **Попадёт при полном clone:** исходники бэкенда (`server.js`, `routes/`, `web/` …), потому что они **закоммичены**. Если нужно **без лишних каталогов** — вариант **B** (sparse, только `deploy`) или **D** (`scp` только `deploy`).
+
+На VPS для запуска Docker нужны только файлы из **`deploy/`** (`docker-compose.yml`, `.env`), плюс образ тянется из GHCR.
+
+### Варианты загрузки
+
+**A — полный clone, работа из `deploy/`** (на диске будет весь репозиторий):
 
 ```bash
 git clone https://github.com/IIIKA8/VR-backend.service.git
 cd VR-backend.service/deploy
 ```
 
-**Вариант B — только zip:** на GitHub → **Code → Download ZIP**, распакуйте на сервере и зайдите в **`deploy/`**.
+**B — только папка `deploy` (sparse checkout, Git ≥ 2.25)** — без остального кода в рабочей папке:
 
-**Вариант C — с вашего ПК:**
+```bash
+git clone --filter=blob:none --sparse https://github.com/IIIKA8/VR-backend.service.git vr-app
+cd vr-app
+git sparse-checkout init --cone
+git sparse-checkout set deploy
+cd deploy
+```
+
+**C — ZIP с GitHub:** **Code → Download ZIP** → на сервере оставьте только папку **`deploy/`** (или распакуйте и перейдите в неё).
+
+**D — только `deploy` с вашего ПК по SSH:**
 
 ```bash
 scp -r deploy user@ВАШ_IP:/opt/vr-backend/

@@ -85,6 +85,24 @@ const userSchema = new mongoose.Schema({
     default: false,
     select: false
   },
+  /** Пациент реабилитации (инсульт, фантомная боль и т.д.) */
+  isPatient: {
+    type: Boolean,
+    default: false,
+    select: true
+  },
+  /** Лечащий врач (ссылка на User с isDoctor) */
+  assignedDoctor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  /** Краткий клинический контекст — редактирует врач в кабинете */
+  clinicalProfile: {
+    conditionSummary: { type: String, default: '' },
+    /** например: ["post_stroke", "phantom_limb"] */
+    tags: [{ type: String }]
+  },
   passwordHash: {
     type: String,
     default: null,

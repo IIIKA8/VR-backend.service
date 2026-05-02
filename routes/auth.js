@@ -104,7 +104,7 @@ router.post('/login', async (req, res) => {
     const loginLower = loginValue.toLowerCase();
     const user = await User.findOne({
       $or: [{ username: loginValue }, { email: loginLower }]
-    }).select('+passwordHash +passwordSalt +isAdmin');
+    }).select('+passwordHash +passwordSalt +isAdmin +isDoctor');
     if (!user || !verifyPassword(password, user.passwordSalt, user.passwordHash)) {
       return res.status(401).json({ error: 'Неверные учетные данные' });
     }
@@ -116,7 +116,11 @@ router.post('/login', async (req, res) => {
       req.session.isAdmin = false;
       req.session.adminUserId = null;
     }
-    return res.json({ success: true, isAdmin: !!user.isAdmin });
+    return res.json({
+      success: true,
+      isAdmin: !!user.isAdmin,
+      isDoctor: !!user.isDoctor
+    });
   } catch (error) {
     console.error('Ошибка входа:', error);
     return res.status(500).json({ error: 'Ошибка входа' });

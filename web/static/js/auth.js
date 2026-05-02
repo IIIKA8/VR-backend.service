@@ -46,7 +46,9 @@ async function loginSubmit(e) {
             window.location.href = next;
             return;
         }
-        window.location.href = data.isAdmin ? '/admin' : '/';
+        if (data.isAdmin) window.location.href = '/admin';
+        else if (data.isDoctor) window.location.href = '/doctor';
+        else window.location.href = '/';
     } catch (error) {
         setMessage(message, 'Ошибка соединения с сервером');
     }

@@ -51,3 +51,6 @@ temp/
 # Build files (если будут)
 dist/
 build/
+
+# Godot VR-клиент (храните отдельно или в другом репозитории)
+godot/

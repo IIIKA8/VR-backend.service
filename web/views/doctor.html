@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Реабилитация VR — кабинет врача</title>
+    <link rel="stylesheet" href="/static/css/doctor.css">
+</head>
+<body>
+    <div class="doctor-layout">
+        <header class="doctor-header">
+            <div class="doctor-brand">
+                <h1>Кабинет врача</h1>
+                <p class="doctor-sub">Постинсультная реабилитация · фантомная боль · VR-сессии</p>
+            </div>
+            <div class="doctor-user">
+                <span id="doctorWelcome"></span>
+                <a href="/auth" class="btn-link">Аккаунт</a>
+                <button type="button" id="doctorLogout" class="btn-secondary">Выйти</button>
+            </div>
+        </header>
+
+        <nav class="doctor-tabs">
+            <button type="button" class="doctor-tab active" data-tab="overview">Обзор</button>
+            <button type="button" class="doctor-tab" data-tab="patients">Пациенты</button>
+            <button type="button" class="doctor-tab" data-tab="analytics" disabled title="Скоро">Аналитика</button>
+        </nav>
+
+        <main class="doctor-main">
+            <section id="panel-overview" class="doctor-panel active">
+                <div class="stats-grid" id="overviewStats">
+                    <div class="stat-card"><span class="stat-value" id="st-patients">—</span><span class="stat-label">Пациентов</span></div>
+                    <div class="stat-card"><span class="stat-value" id="st-sessions">—</span><span class="stat-label">VR-сессий за 7 дней</span></div>
+                    <div class="stat-card"><span class="stat-value" id="st-notes">—</span><span class="stat-label">Медзаписей</span></div>
+                    <div class="stat-card"><span class="stat-value" id="st-devices">—</span><span class="stat-label">Активных назначений устройств</span></div>
+                </div>
+                <p class="hint">Расширенная статистика и отчёты подключим на следующем этапе.</p>
+            </section>
+
+            <section id="panel-patients" class="doctor-panel">
+                <div class="toolbar">
+                    <input type="search" id="patientSearch" placeholder="Поиск по ФИО…" autocomplete="off">
+                </div>
+                <div class="table-wrap">
+                    <table class="doctor-table">
+                        <thead>
+                            <tr>
+                                <th>Пациент</th>
+                                <th>Возраст</th>
+                                <th>Теги</th>
+                                <th>Последняя активность</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsBody"></tbody>
+                    </table>
+                </div>
+                <p id="patientsEmpty" class="empty-msg hidden">Нет закреплённых пациентов. Назначение выполняет администратор (поле «лечащий врач» в учётной записи пациента).</p>
+            </section>
+
+            <section id="panel-analytics" class="doctor-panel">
+                <p class="hint">Раздел в разработке.</p>
+            </section>
+        </main>
+    </div>
+
+    <aside id="patientDrawer" class="drawer" aria-hidden="true">
+        <div class="drawer-backdrop" id="drawerBackdrop"></div>
+        <div class="drawer-panel">
+            <button type="button" class="drawer-close" id="drawerClose" aria-label="Закрыть">×</button>
+            <h2 id="drawerTitle">Пациент</h2>
+            <div class="drawer-section">
+                <h3>Клинические пометки</h3>
+                <textarea id="clinicalSummary" rows="4" placeholder="Диагноз, контекст реабилитации…"></textarea>
+                <label class="inline-label">Теги (через запятую)</label>
+                <input type="text" id="clinicalTags" placeholder="post_stroke, phantom_limb">
+                <button type="button" class="btn-primary" id="saveClinical">Сохранить</button>
+                <span id="clinicalSaveMsg" class="form-msg"></span>
+            </div>
+            <div class="drawer-section">
+                <h3>Медицинские записи</h3>
+                <ul id="notesList" class="notes-list"></ul>
+                <textarea id="newNote" rows="3" placeholder="Новая запись…"></textarea>
+                <button type="button" class="btn-primary" id="addNote">Добавить запись</button>
+            </div>
+            <div class="drawer-section">
+                <h3>VR-сессии (последние)</h3>
+                <ul id="sessionsList" class="mini-list"></ul>
+            </div>
+            <div class="drawer-section">
+                <h3>Периоды доступа к устройствам</h3>
+                <ul id="periodsList" class="mini-list"></ul>
+            </div>
+        </div>
+    </aside>
+
+    <script src="/static/js/doctor.js"></script>
+</body>
+</html>

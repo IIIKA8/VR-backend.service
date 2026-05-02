@@ -3,12 +3,20 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 // Подключение моделей
 const User = require('./models/User');
 const Device = require('./models/Device');
 const UsagePeriod = require('./models/UsagePeriod');
 const VRSession = require('./models/VRSession');
+const MedicalNote = require('./models/MedicalNote');
+
+const PASSWORD_KEYLEN = 64;
+
+function hashPassword(password, salt) {
+  return crypto.scryptSync(password, salt, PASSWORD_KEYLEN).toString('hex');
+}
 
 // Подключение к MongoDB (используем тот же URI что и в server.js)
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/vr-app';
@@ -27,6 +35,7 @@ async function seed() {
     // Очистка существующих данных (опционально - можно закомментировать)
     console.log('\n🧹 Очистка старых данных...');
     try {
+      await MedicalNote.deleteMany({});
       await User.deleteMany({});
       await Device.deleteMany({});
       await UsagePeriod.deleteMany({});
@@ -37,51 +46,98 @@ async function seed() {
       console.log('📝 Продолжаем без очистки...');
     }
 
-    // Создание тестовых пользователей
-    console.log('\n👥 Создание тестовых пользователей...');
+    // Лечащий врач (кабинет /doctor) — пароль из SEED_DOCTOR_PASSWORD или по умолчанию
+    console.log('\n👨‍⚕️ Создание учётной записи врача...');
+    const doctorSalt = crypto.randomBytes(16).toString('hex');
+    const doctorPlainPassword = process.env.SEED_DOCTOR_PASSWORD || 'doctor-demo-2024';
+    const doctorHash = hashPassword(doctorPlainPassword, doctorSalt);
+    const doctor = await User.create({
+      username: 'doctor_demo',
+      email: 'doctor@rehab.local',
+      lastName: 'Смирнов',
+      firstName: 'Алексей',
+      middleName: 'Петрович',
+      age: 42,
+      isDoctor: true,
+      isAdmin: false,
+      isPatient: false,
+      passwordSalt: doctorSalt,
+      passwordHash: doctorHash
+    });
+    console.log(`✅ Врач: ${doctor.username} / ${doctorPlainPassword} (смените пароль в проде)`);
+
+    // Пациенты реабилитации, закреплённые за врачом
+    console.log('\n👥 Создание пациентов...');
     const users = await User.insertMany([
       {
         lastName: 'Иванов',
         firstName: 'Иван',
         middleName: 'Иванович',
-        age: 25,
+        age: 62,
         isOnline: true,
-        lastSeen: new Date()
+        lastSeen: new Date(),
+        isPatient: true,
+        assignedDoctor: doctor._id,
+        clinicalProfile: {
+          conditionSummary: 'Ишемический инсульт в прошлом году, лёгкая хемипарез слева.',
+          tags: ['post_stroke']
+        }
       },
       {
         lastName: 'Петров',
         firstName: 'Петр',
         middleName: 'Петрович',
-        age: 30,
+        age: 58,
         isOnline: false,
-        lastSeen: new Date(Date.now() - 3600000) // час назад
+        lastSeen: new Date(Date.now() - 3600000),
+        isPatient: true,
+        assignedDoctor: doctor._id,
+        clinicalProfile: {
+          conditionSummary: 'Фантомные боли после ампутации нижней конечности.',
+          tags: ['phantom_limb']
+        }
       },
       {
         lastName: 'Сидоров',
         firstName: 'Сидор',
         middleName: 'Сидорович',
-        age: 28,
+        age: 55,
         isOnline: true,
-        lastSeen: new Date()
+        lastSeen: new Date(),
+        isPatient: true,
+        assignedDoctor: doctor._id,
+        clinicalProfile: { conditionSummary: 'Восстановление моторики кисти.', tags: ['post_stroke', 'motor'] }
       },
       {
         lastName: 'Кулькоя',
         firstName: 'Александр',
         middleName: 'Дмитриевич',
-        age: 22,
+        age: 49,
         isOnline: true,
-        lastSeen: new Date()
+        lastSeen: new Date(),
+        isPatient: true,
+        assignedDoctor: doctor._id,
+        clinicalProfile: { tags: ['post_stroke'] }
       },
       {
         lastName: 'Палин',
         firstName: 'Дмитрий',
         middleName: 'Иванович',
-        age: 35,
+        age: 67,
         isOnline: false,
-        lastSeen: new Date(Date.now() - 7200000) // 2 часа назад
+        lastSeen: new Date(Date.now() - 7200000),
+        isPatient: true,
+        assignedDoctor: doctor._id,
+        clinicalProfile: { conditionSummary: 'Под наблюдением, VR-тренировки моторики.', tags: ['post_stroke'] }
       }
     ]);
-    console.log(`✅ Создано ${users.length} пользователей`);
+    console.log(`✅ Создано ${users.length} пациентов (закреплены за ${doctor.username})`);
+
+    await MedicalNote.create({
+      doctor: doctor._id,
+      patient: users[1]._id,
+      body: 'Первичный осмотр: жалобы на фантомные боли 4–6 по шкале. Рекомендованы сеансы VR.'
+    });
 
     // Создание тестовых устройств
     console.log('\n🥽 Создание тестовых устройств...');

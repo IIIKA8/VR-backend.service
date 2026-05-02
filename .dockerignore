@@ -1,4 +1,5 @@
 # Исключаем из контекста сборки Docker
+godot
 node_modules
 npm-debug.log
 .git

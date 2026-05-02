@@ -180,6 +180,7 @@ const licenseRoutes = require('./routes/licenses');
 const deviceRoutes = require('./routes/devices');
 const usagePeriodRoutes = require('./routes/usagePeriods');
 const authRoutes = require('./routes/auth');
+const doctorRoutes = require('./routes/doctor');
 
 // API маршруты ПЕРЕД статикой
 app.use('/api/users', userRoutes);
@@ -289,21 +290,28 @@ async function adminGuard(req, res, next) {
   }
 }
 
-// Middleware: страница статистики пациента — только врач или админ
-async function patientStatsGuard(req, res, next) {
+// Кабинет врача — только isDoctor (без админки и общего дашборда)
+async function doctorGuard(req, res, next) {
   try {
     const userId = req.session?.userId;
+    const isApi = req.originalUrl.startsWith('/api');
     if (!userId) {
-      return res.redirect('/auth?next=/patient-stats');
+      if (isApi) return res.status(401).json({ error: 'Требуется вход' });
+      return res.redirect('/auth?next=/doctor');
     }
-    const user = await User.findById(userId).select('isAdmin isDoctor');
-    if (!user || (!user.isAdmin && !user.isDoctor)) {
-      return res.redirect('/auth?next=/patient-stats');
+    const user = await User.findById(userId).select('isDoctor');
+    if (!user || !user.isDoctor) {
+      if (isApi) return res.status(403).json({ error: 'Доступ только для врачей' });
+      return res.status(403).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Доступ запрещён</title></head>
+<body style="font-family:sans-serif;padding:2rem;"><p>Раздел только для врачей.</p><p><a href="/auth">Вход</a></p></body></html>`);
     }
     return next();
   } catch (error) {
-    console.error('Ошибка проверки доступа к статистике пациента:', error);
-    return res.redirect('/auth?next=/patient-stats');
+    console.error('doctorGuard:', error);
+    if (req.originalUrl.startsWith('/api')) {
+      return res.status(500).json({ error: 'Ошибка проверки доступа' });
+    }
+    return res.redirect('/auth?next=/doctor');
   }
 }
 
@@ -316,8 +324,14 @@ app.get('/admin', adminGuard, (req, res) => {
 app.get('/auth', (req, res) => {
   res.sendFile(path.join(__dirname, 'web/views/auth.html'));
 });
-app.get('/patient-stats', patientStatsGuard, (req, res) => {
-  res.sendFile(path.join(__dirname, 'web/views/patient_stats.html'));
+app.get('/patient-stats', (req, res) => {
+  res.redirect(301, '/doctor');
+});
+
+app.use('/api/doctor', doctorGuard, doctorRoutes);
+
+app.get('/doctor', doctorGuard, (req, res) => {
+  res.sendFile(path.join(__dirname, 'web/views/doctor.html'));
 });
 // (можно добавить аналогичную защиту для других admin страниц)
 
@@ -399,9 +413,19 @@ app.use('/static', (req, res, next) => {
   next();
 });
 
-// главная страница дашборда
-app.get('/', (req, res) => {
-  //console.log('📄 Запрос главной страницы');
+// главная страница дашборда (врачей без админки — в кабинет врача)
+app.get('/', async (req, res) => {
+  try {
+    const uid = req.session?.userId;
+    if (uid) {
+      const u = await User.findById(uid).select('isDoctor isAdmin');
+      if (u && u.isDoctor && !u.isAdmin) {
+        return res.redirect(302, '/doctor');
+      }
+    }
+  } catch (e) {
+    console.error('GET / redirect:', e);
+  }
   res.sendFile(path.join(__dirname, 'web/views/index.html'));
 });
 

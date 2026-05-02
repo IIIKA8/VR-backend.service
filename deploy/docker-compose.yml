@@ -20,7 +20,10 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      MONGODB_URI: mongodb://mongodb:27017/vr-app
+      MONGO_HOST: mongodb
+      MONGO_DB: vr-app
+      MONGO_USER: ${MONGO_USER:?Задайте MONGO_USER в .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
       SESS_SECRET: ${SESS_SECRET:?Задайте SESS_SECRET в .env}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:
@@ -44,8 +47,14 @@ services:
       - mongodb_data:/data/db
     environment:
       MONGO_INITDB_DATABASE: vr-app
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?}
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test:
+        [
+          "CMD-SHELL",
+          'mongo -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 })" --quiet || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

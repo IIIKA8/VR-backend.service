@@ -99,8 +99,28 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
-// MongoDB подключение
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/vr-app';
+// MongoDB: полный URI в MONGODB_URI или сборка из MONGO_USER / MONGO_PASSWORD / MONGO_HOST / MONGO_DB
+function resolveMongoUri() {
+  if (process.env.MONGODB_URI) {
+    return process.env.MONGODB_URI;
+  }
+  const host = process.env.MONGO_HOST || 'localhost';
+  const db = process.env.MONGO_DB || 'vr-app';
+  const user = process.env.MONGO_USER;
+  const pass = process.env.MONGO_PASSWORD;
+  if (user && pass) {
+    const u = encodeURIComponent(user);
+    const p = encodeURIComponent(pass);
+    return `mongodb://${u}:${p}@${host}:27017/${db}?authSource=admin`;
+  }
+  return `mongodb://${host}:27017/${db}`;
+}
+
+const MONGODB_URI = resolveMongoUri();
+
+function mongoUriForLog(uri) {
+  return uri.replace(/\/\/([^/]*?)@/, '//***:***@');
+}
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
@@ -108,7 +128,7 @@ mongoose.connect(MONGODB_URI, {
 })
 .then(() => {
   console.log('✅ Подключение к MongoDB успешно установлено');
-  console.log(`📊 База данных: ${MONGODB_URI}`);
+  console.log(`📊 База данных: ${mongoUriForLog(MONGODB_URI)}`);
 })
 .catch((error) => {
   console.error('❌ Ошибка подключения к MongoDB:', error);

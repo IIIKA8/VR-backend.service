@@ -59,6 +59,20 @@ ssh user@ВАШ_IP
 cd /opt/vr-backend
 ```
 
+### MongoDB и Compass
+
+Задайте **`MONGO_USER`** и **`MONGO_PASSWORD`** в `.env` — они создают **root** в Mongo при **первой** инициализации тома и используются приложением.
+
+В **MongoDB Compass** (через SSH-туннель на `127.0.0.1:27017`): **Authentication → Username/Password**, пользователь и пароль как в `.env`, **Authentication Database** = **`admin`**.
+
+Если раньше Mongo работала **без пароля**, новый root при уже существующем томе **может не создаться**. Тогда либо заведите пользователя вручную в `mongosh`, либо **осознанно** очистите том (данные пропадут):
+
+```bash
+docker compose down
+docker volume rm deploy_mongodb_data   # только если бэкап не нужен
+docker compose up -d
+```
+
 ---
 
 ## 3. Настройка `.env` на сервере
@@ -71,10 +85,11 @@ nano .env
 
 Обязательно задайте:
 
-| Переменная       | Описание |
-|------------------|----------|
-| `DOCKER_IMAGE`   | Полный URL образа из GHCR (см. шаг 1). |
-| `SESS_SECRET`    | Длинная случайная строка (например `openssl rand -hex 32`). |
+| Переменная        | Описание |
+|-------------------|----------|
+| `DOCKER_IMAGE`    | Полный URL образа из GHCR (см. шаг 1). |
+| `SESS_SECRET`     | Длинная случайная строка (например `openssl rand -hex 32`). |
+| `MONGO_USER` / `MONGO_PASSWORD` | Обязательны: root Mongo и вход приложения в БД (Compass: auth DB **admin**). |
 
 Сохраните файл. Файл **`.env` не коммитьте** — он только на сервере.
 

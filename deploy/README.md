@@ -82,12 +82,21 @@ nano .env
 
 ## 4. Запуск и обновление
 
-Из каталога, где лежат **`docker-compose.yml`** и **`.env`**:
+Из каталога **`deploy/`**, где лежат **`docker-compose.yml`** и **`.env`**:
 
 ```bash
-docker compose -f docker-compose.yml pull
-docker compose -f docker-compose.yml up -d
+docker compose up -d
 ```
+
+В `docker-compose.yml` для сервиса **`app`** включено **`pull_policy: always`** — при каждом `up` Docker подтянет свежий образ **`latest`** из GHCR (если CI уже собрал новый).
+
+Либо явно:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Скрипт (на Linux-сервере): `chmod +x update.sh && ./update.sh`
 
 Проверка:
 

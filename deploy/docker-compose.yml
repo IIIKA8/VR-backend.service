@@ -1,15 +1,17 @@
-# Развёртывание только из образов Docker (без исходного кода на сервере).
-# Образ должен быть собран и запушен в реестр (Docker Hub / GHCR).
-# CI в репозитории публикует в GHCR при push в main — см. .github/workflows/docker-publish.yml
-# Пример .env:
-#   DOCKER_IMAGE=ghcr.io/iiiKA8/vr-backend.service:latest
-#   SESS_SECRET=...
-# Обновление после нового релиза:
+# Продакшен на VPS: только образ из GHCR (репозиторий IIIKA8/VR-backend.service).
+# CI публикует: ghcr.io/iiika8/vr-backend.service:latest
+#
+# На сервере в этой же папке положите .env (скопируйте из .env.example).
+# Обновление после push в main:
 #   docker compose pull && docker compose up -d
+# или просто:
+#   docker compose up -d
+#   (pull_policy: always подтянет новый latest автоматически)
 
 services:
   app:
-    image: ${DOCKER_IMAGE:-leshien/vr-backend-web-app:latest}
+    image: ${DOCKER_IMAGE:-ghcr.io/iiika8/vr-backend.service:latest}
+    pull_policy: always
     container_name: vr-backend-app
     restart: unless-stopped
     ports:
@@ -33,6 +35,7 @@ services:
 
   mongodb:
     image: mongo:4.4
+    pull_policy: missing
     container_name: vr-backend-mongodb
     restart: unless-stopped
     ports:

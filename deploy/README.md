@@ -122,15 +122,26 @@ docker compose logs -f app --tail 50
 
 ---
 
-## 5. Если образ приватный (ошибка pull)
+## 5. Ошибка `unauthorized` при `docker compose pull` (GHCR)
 
-На сервере один раз:
+Сообщение вида `Head "https://ghcr.io/.../manifests/latest": unauthorized` значит: пакет в **GitHub Container Registry** **приватный**, и Docker пытается скачать его **без логина**.
+
+**Вариант 1 (проще для одного сервера):** сделать пакет **публичным**
+
+1. GitHub → **Packages** (в профиле или в репозитории) → откройте пакет **`vr-backend.service`**.
+2. **Package settings** → **Change package visibility** → **Public** → подтвердить.
+
+После этого снова: `docker compose pull && docker compose up -d`.
+
+**Вариант 2:** оставить пакет приватным — один раз залогиниться на сервере:
 
 ```bash
-echo YOUR_GITHUB_TOKEN | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+echo ВАШ_GITHUB_TOKEN | docker login ghcr.io -u ВАШ_ЛОГИН_GITHUB --password-stdin
 ```
 
-Токен GitHub: **Settings → Developer settings → Personal access tokens** — права **`read:packages`** (и **`write:packages`** если пушите с сервера).
+Токен: **Settings → Developer settings → Personal access tokens** (classic) — отметьте **`read:packages`**. Логин — тот же, что на GitHub (часто совпадает с владельцем репозитория).
+
+Проверка: `docker pull ghcr.io/iiika8/vr-backend.service:latest` (подставьте точный путь из **Packages**).
 
 ---
 

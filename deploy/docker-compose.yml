@@ -1,6 +1,11 @@
-# Развёртывание только из образов Docker (без исходного кода)
-# Заполните .env: DOCKER_IMAGE=leshien/vr-backend-web-app:latest, SESS_SECRET=...
-# Запуск: docker compose up -d
+# Развёртывание только из образов Docker (без исходного кода на сервере).
+# Образ должен быть собран и запушен в реестр (Docker Hub / GHCR).
+# CI в репозитории публикует в GHCR при push в main — см. .github/workflows/docker-publish.yml
+# Пример .env:
+#   DOCKER_IMAGE=ghcr.io/iiiKA8/vr-backend.service:latest
+#   SESS_SECRET=...
+# Обновление после нового релиза:
+#   docker compose pull && docker compose up -d
 
 services:
   app:

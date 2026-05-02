@@ -1,0 +1,39 @@
+# После push в main собирает образ и публикует в GitHub Container Registry (GHCR).
+# На сервере без исходников: задайте в .env образ, например:
+#   DOCKER_IMAGE=ghcr.io/iiiKA8/vr-backend.service:latest
+# Первый раз: в настройках пакета GHCR включите visibility / привяжите к репозиторию.
+# Обновление на сервере: docker compose pull && docker compose up -d
+
+name: Publish Docker image
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Имя образа в нижнем регистре (требование GHCR)
+        shell: bash
+        run: |
+          r='${{ github.repository }}'
+          echo "IMAGE=ghcr.io/${r,,}:latest" >> $GITHUB_ENV
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}

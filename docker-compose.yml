@@ -17,7 +17,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      MONGODB_URI: ${MONGODB_URI:-mongodb://mongodb:27017/vr-app}
+      # Собирается из .env. Пароль без символов @ : / ? # или задайте полный MONGODB_URI в .env и замените строку ниже на ${MONGODB_URI} при необходимости.
+      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/vr-app?authSource=admin
       SESS_SECRET: ${SESS_SECRET:-change-me-in-production}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:
@@ -34,14 +35,17 @@ services:
     image: mongo:4.4
     container_name: vr-backend-mongodb
     restart: unless-stopped
+    # Только localhost на сервере → из интернета 27017 недоступен; Compass — через SSH-туннель на 127.0.0.1:27017
     ports:
-      - "${MONGODB_PORT:-27017}:27017"
+      - "127.0.0.1:${MONGODB_PORT:-27017}:27017"
     volumes:
       - mongodb_data:/data/db
     environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?Задайте MONGO_USER в .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
       MONGO_INITDB_DATABASE: vr-app
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongo", "-u", "${MONGO_USER}", "-p", "${MONGO_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5

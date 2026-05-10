@@ -99,29 +99,9 @@ app.use((error, req, res, next) => {
   next(error);
 });
 
-// MongoDB: при наличии MONGO_USER+MONGO_PASSWORD собираем URI с encodeURIComponent (спецсимволы в пароле допустимы).
-// Иначе используется MONGODB_URI или URI без авторизации.
-function resolveMongoUri() {
-  const host = process.env.MONGO_HOST || 'localhost';
-  const db = process.env.MONGO_DB || 'vr-app';
-  const user = process.env.MONGO_USER;
-  const pass = process.env.MONGO_PASSWORD;
-  if (user && pass) {
-    const u = encodeURIComponent(user);
-    const p = encodeURIComponent(pass);
-    return `mongodb://${u}:${p}@${host}:27017/${db}?authSource=admin`;
-  }
-  if (process.env.MONGODB_URI) {
-    return process.env.MONGODB_URI;
-  }
-  return `mongodb://${host}:27017/${db}`;
-}
+const { resolveMongoUri, mongoUriForLog } = require('./util/mongoUri');
 
 const MONGODB_URI = resolveMongoUri();
-
-function mongoUriForLog(uri) {
-  return uri.replace(/\/\/([^/]*?)@/, '//***:***@');
-}
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,

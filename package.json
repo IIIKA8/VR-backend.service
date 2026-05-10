@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "seed": "node seed.js",
+    "seed:bulk": "node seed-bulk.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

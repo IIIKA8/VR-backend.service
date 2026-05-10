@@ -4,6 +4,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const { resolveMongoUri, mongoUriForLog } = require('./util/mongoUri');
 
 // Подключение моделей
 const User = require('./models/User');
@@ -18,13 +19,12 @@ function hashPassword(password, salt) {
   return crypto.scryptSync(password, salt, PASSWORD_KEYLEN).toString('hex');
 }
 
-// Подключение к MongoDB (используем тот же URI что и в server.js)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/vr-app';
+const MONGODB_URI = resolveMongoUri();
 
 async function seed() {
   try {
     console.log('🔌 Подключение к MongoDB...');
-    console.log('📊 URI:', MONGODB_URI.replace(/\/\/.*@/, '//***:***@')); // Скрываем пароль в логах
+    console.log('📊 URI:', mongoUriForLog(MONGODB_URI));
     
     await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,

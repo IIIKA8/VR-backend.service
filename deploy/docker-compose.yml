@@ -20,8 +20,11 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      # Логин/пароль из .env на сервере (без открытого Mongo в интернет см. ports у mongodb).
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/vr-app?authSource=admin
+      # URI собирает приложение (encodeURIComponent) — не подставляйте пароль в MONGODB_URI через compose.
+      MONGO_HOST: mongodb
+      MONGO_DB: vr-app
+      MONGO_USER: ${MONGO_USER:?Задайте MONGO_USER в .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
       SESS_SECRET: ${SESS_SECRET:?Задайте SESS_SECRET в .env}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:

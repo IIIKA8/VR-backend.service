@@ -17,8 +17,11 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      # Собирается из .env. Пароль без символов @ : / ? # или задайте полный MONGODB_URI в .env и замените строку ниже на ${MONGODB_URI} при необходимости.
-      MONGODB_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/vr-app?authSource=admin
+      # URI собирает server.js с encodeURIComponent — пароль может содержать @ : / % и т.д.
+      MONGO_HOST: mongodb
+      MONGO_DB: vr-app
+      MONGO_USER: ${MONGO_USER:?Задайте MONGO_USER в .env}
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
       SESS_SECRET: ${SESS_SECRET:-change-me-in-production}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:

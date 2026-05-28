@@ -29,9 +29,16 @@ router.get('/', async (req, res) => {
     }
     if (status === 'online') filter.isOnline = true;
     else if (status === 'offline') filter.isOnline = false;
-    if (role === 'patient') filter.isPatient = true;
-    else if (role === 'doctor') filter.isDoctor = true;
-    else if (role === 'admin') filter.isAdmin = true;
+    if (role === 'patient') {
+      filter.isPatient = true;
+      filter.isDoctor = { $ne: true };
+      filter.isAdmin = { $ne: true };
+    } else if (role === 'doctor') {
+      filter.isDoctor = true;
+      filter.isAdmin = { $ne: true };
+    } else if (role === 'admin') {
+      filter.isAdmin = true;
+    }
 
     const baseQuery = User.find(filter).select('-__v').sort({ lastSeen: -1 });
 

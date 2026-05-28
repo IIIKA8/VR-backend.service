@@ -416,18 +416,20 @@ app.get('/api/admin/users', async (req, res) => {
   }
 });
 
-// Изменение ролей пользователя. Тело: { isPatient?, isDoctor?, isAdmin? } (булевы, любые из).
+// Изменение роли пользователя. Тело: { role: 'none' | 'patient' | 'doctor' | 'admin' } — роли взаимоисключающие.
+const ROLE_FLAGS = {
+  none: { isPatient: false, isDoctor: false, isAdmin: false },
+  patient: { isPatient: true, isDoctor: false, isAdmin: false },
+  doctor: { isPatient: false, isDoctor: true, isAdmin: false },
+  admin: { isPatient: false, isDoctor: false, isAdmin: true }
+};
+
 app.patch('/api/admin/users/:id/roles', async (req, res) => {
   try {
     const { id } = req.params;
-    const body = req.body || {};
-    const patch = {};
-    if (typeof body.isPatient === 'boolean') patch.isPatient = body.isPatient;
-    if (typeof body.isDoctor === 'boolean') patch.isDoctor = body.isDoctor;
-    if (typeof body.isAdmin === 'boolean') patch.isAdmin = body.isAdmin;
-
-    if (Object.keys(patch).length === 0) {
-      return res.status(400).json({ error: 'Не указаны роли для изменения' });
+    const role = (req.body || {}).role;
+    if (!Object.prototype.hasOwnProperty.call(ROLE_FLAGS, role)) {
+      return res.status(400).json({ error: 'Недопустимая роль' });
     }
 
     const user = await User.findById(id).select('+isAdmin +isDoctor');
@@ -435,8 +437,8 @@ app.patch('/api/admin/users/:id/roles', async (req, res) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    // Защита от блокировки доступа в админку
-    if (patch.isAdmin === false && user.isAdmin) {
+    // Защита от блокировки доступа в админку: снятие роли администратора
+    if (user.isAdmin && role !== 'admin') {
       if (String(req.session?.adminUserId) === String(id)) {
         return res.status(400).json({ error: 'Нельзя снять роль администратора с самого себя' });
       }
@@ -446,18 +448,29 @@ app.patch('/api/admin/users/:id/roles', async (req, res) => {
       }
     }
 
-    Object.assign(user, patch);
+    const wasDoctor = user.isDoctor;
+    Object.assign(user, ROLE_FLAGS[role]);
+    // Не-пациент не должен ссылаться на лечащего врача
+    if (role !== 'patient') {
+      user.assignedDoctor = null;
+    }
     await user.save();
+
+    // Пациенты не должны ссылаться на бывшего врача
+    if (wasDoctor && role !== 'doctor') {
+      await User.updateMany({ assignedDoctor: user._id }, { assignedDoctor: null });
+    }
 
     return res.json({
       _id: user._id,
+      role,
       isPatient: !!user.isPatient,
       isDoctor: !!user.isDoctor,
       isAdmin: !!user.isAdmin
     });
   } catch (error) {
-    console.error('Ошибка изменения ролей:', error);
-    return res.status(500).json({ error: 'Ошибка при изменении ролей' });
+    console.error('Ошибка изменения роли:', error);
+    return res.status(500).json({ error: 'Ошибка при изменении роли' });
   }
 });
 

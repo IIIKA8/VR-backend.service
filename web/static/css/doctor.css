@@ -1,13 +1,13 @@
 :root {
-  --bg: #0f1419;
-  --surface: #1a2332;
-  --border: #2d3a4d;
-  --text: #e8eef7;
-  --muted: #8b9cb3;
-  --accent: #3d9dff;
-  --accent-dim: #2563a8;
-  --success: #34d399;
-  --danger: #f87171;
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --border: #d8dee8;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-dim: #1d4ed8;
+  --success: #059669;
+  --danger: #dc2626;
 }
 
 * { box-sizing: border-box; }
@@ -47,7 +47,7 @@ body {
   padding: 0.45rem 1rem;
   font-size: 0.9rem;
 }
-.btn-primary { background: var(--accent); color: #061018; font-weight: 600; }
+.btn-primary { background: var(--accent); color: #ffffff; font-weight: 600; }
 .btn-primary:hover { filter: brightness(1.08); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -65,7 +65,7 @@ body {
   font-size: 0.95rem;
 }
 .doctor-tab:hover:not(:disabled) { color: var(--text); border-color: var(--muted); }
-.doctor-tab.active { color: var(--text); border-color: var(--accent); background: rgba(61, 157, 255, 0.12); }
+.doctor-tab.active { color: var(--accent); border-color: var(--accent); background: rgba(37, 99, 235, 0.08); }
 .doctor-tab:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .doctor-main { margin-top: 1.5rem; }
@@ -121,7 +121,7 @@ body {
 }
 
 .doctor-table th { color: var(--muted); font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
-.doctor-table tbody tr:hover { background: rgba(61, 157, 255, 0.06); }
+.doctor-table tbody tr:hover { background: rgba(37, 99, 235, 0.05); }
 
 .tag-pill {
   display: inline-block;
@@ -142,7 +142,7 @@ body {
   color: var(--accent);
   cursor: pointer;
 }
-.btn-small:hover { background: rgba(61, 157, 255, 0.15); }
+.btn-small:hover { background: rgba(37, 99, 235, 0.1); }
 
 .empty-msg { color: var(--muted); text-align: center; padding: 2rem; }
 .hidden { display: none !important; }
@@ -154,7 +154,7 @@ body {
 .drawer-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(15, 23, 42, 0.35);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -166,13 +166,13 @@ body {
   right: 0;
   width: min(480px, 100%);
   height: 100%;
-  background: #151d2a;
+  background: #ffffff;
   border-left: 1px solid var(--border);
   padding: 1.25rem 1.5rem 2rem;
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform 0.22s ease;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.18);
 }
 
 .drawer[aria-hidden="false"] .drawer-panel { transform: translateX(0); }

@@ -151,7 +151,7 @@ let allUsers = [];
 // Загрузка пользователей с сохранением в глобальную переменную
 async function loadUsers() {
     try {
-        const response = await fetch(`${API_BASE}/users`);
+        const response = await fetch(`${API_BASE}/users?role=patient`);
         allUsers = await response.json();
         
         // Обновляем dropdown
@@ -619,11 +619,25 @@ function renderUsersTable() {
         return opts.join('');
     };
 
+    const roleOptions = (role) => {
+        const items = [
+            ['none', '— без роли —'],
+            ['patient', 'Пациент'],
+            ['doctor', 'Врач'],
+            ['admin', 'Администратор']
+        ];
+        return items
+            .map(([v, label]) => `<option value="${v}"${v === role ? ' selected' : ''}>${label}</option>`)
+            .join('');
+    };
+
     tbody.innerHTML = pageItems.map((user) => {
         const status = user.isOnline
             ? '<span class="status-badge status-online">Онлайн</span>'
             : '<span class="status-badge status-offline">Оффлайн</span>';
+        const role = getUserRole(user);
         const assigned = user.assignedDoctor || '';
+        const doctorDisabled = role !== 'patient' ? ' disabled' : '';
         const noPassword = !user.hasPassword
             ? '<span class="no-password-hint" title="У пользователя нет пароля — он не сможет войти, пока пароль не задан">нет пароля</span>'
             : '';
@@ -634,17 +648,11 @@ function renderUsersTable() {
                 <td>${escapeHtml(user.middleName || '-')}</td>
                 <td>${user.age ? escapeHtml(user.age + ' лет') : '-'}</td>
                 <td>${status}</td>
-                <td style="text-align:center;">
-                    <input type="checkbox" class="role-toggle" data-role="isPatient" data-id="${user._id}" ${user.isPatient ? 'checked' : ''}>
-                </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" class="role-toggle" data-role="isDoctor" data-id="${user._id}" ${user.isDoctor ? 'checked' : ''}>
-                </td>
-                <td style="text-align:center;">
-                    <input type="checkbox" class="role-toggle" data-role="isAdmin" data-id="${user._id}" ${user.isAdmin ? 'checked' : ''}>
+                <td>
+                    <select class="form-control role-select" data-id="${user._id}">${roleOptions(role)}</select>
                 </td>
                 <td>
-                    <select class="form-control doctor-select" data-id="${user._id}">${doctorOptions(assigned)}</select>
+                    <select class="form-control doctor-select" data-id="${user._id}"${doctorDisabled}>${doctorOptions(assigned)}</select>
                 </td>
                 <td class="user-actions">
                     <button class="btn-link reset-password-btn" data-id="${user._id}" title="Задать или сбросить пароль">🔑 Пароль</button>
@@ -654,8 +662,8 @@ function renderUsersTable() {
             </tr>`;
     }).join('');
 
-    tbody.querySelectorAll('.role-toggle').forEach((cb) => {
-        cb.addEventListener('change', () => updateUserRole(cb));
+    tbody.querySelectorAll('.role-select').forEach((sel) => {
+        sel.addEventListener('change', () => updateUserRole(sel));
     });
     tbody.querySelectorAll('.doctor-select').forEach((sel) => {
         sel.addEventListener('change', () => updateUser(sel.dataset.id, { assignedDoctor: sel.value || null }));
@@ -667,17 +675,24 @@ function renderUsersTable() {
     renderPager('usersPager', filtered.length, usersPage, (p) => { usersPage = p; renderUsersTable(); });
 }
 
-// Изменение роли через защищённый эндпоинт. cb — чекбокс с data-role/data-id.
-async function updateUserRole(cb) {
-    const id = cb.dataset.id;
-    const role = cb.dataset.role;
-    const value = cb.checked;
+// Определение текущей роли пользователя по флагам (приоритет: admin > doctor > patient).
+function getUserRole(u) {
+    if (u.isAdmin) return 'admin';
+    if (u.isDoctor) return 'doctor';
+    if (u.isPatient) return 'patient';
+    return 'none';
+}
+
+// Изменение роли через защищённый эндпоинт. sel — select с data-id.
+async function updateUserRole(sel) {
+    const id = sel.dataset.id;
+    const role = sel.value;
     try {
         const res = await fetch(`${API_BASE}/admin/users/${id}/roles`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ [role]: value })
+            body: JSON.stringify({ role })
         });
         if (!res.ok) {
             const e = await res.json().catch(() => ({}));
@@ -688,8 +703,8 @@ async function updateUserRole(cb) {
         const updated = await res.json();
         const idx = usersCache.findIndex((u) => String(u._id) === String(id));
         if (idx >= 0) usersCache[idx] = { ...usersCache[idx], ...updated };
-        // Назначение/снятие роли врача меняет список лечащих врачей
-        if (role === 'isDoctor') loadUsersTable();
+        // Смена роли врача меняет список лечащих врачей; перерисовка обновит select'ы и доступность
+        loadUsersTable();
     } catch (error) {
         console.error('Ошибка изменения роли:', error);
         alert('Ошибка соединения');

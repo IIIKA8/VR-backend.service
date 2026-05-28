@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VR Backend - Дашборд</title>
+    <link rel="stylesheet" href="/static/css/minichart.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
 </head>
 <body>
@@ -75,9 +76,36 @@
             </div>
         </div>
 
+        <div class="charts-row">
+            <div class="dashboard-panel chart-panel">
+                <h2 class="panel-title">Активность за 7 дней</h2>
+                <div id="chartActivity" class="chart-host"></div>
+            </div>
+            <div class="dashboard-panel chart-panel">
+                <h2 class="panel-title">Упражнения по режимам</h2>
+                <div id="chartModes" class="chart-host"></div>
+            </div>
+        </div>
+
         <div class="dashboard-content">
             <div class="dashboard-panel">
-                <h2 class="panel-title">Онлайн пользователи</h2>
+                <div class="panel-head">
+                    <h2 class="panel-title">Пользователи</h2>
+                    <div class="toolbar">
+                        <input type="search" id="usersSearch" class="toolbar-input" placeholder="Поиск по ФИО / email…" autocomplete="off">
+                        <select id="usersStatus" class="toolbar-select">
+                            <option value="">Все статусы</option>
+                            <option value="online">Онлайн</option>
+                            <option value="offline">Оффлайн</option>
+                        </select>
+                        <select id="usersRole" class="toolbar-select">
+                            <option value="">Все роли</option>
+                            <option value="patient">Пациенты</option>
+                            <option value="doctor">Врачи</option>
+                            <option value="admin">Админы</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -88,15 +116,27 @@
                                 <th>Статус</th>
                             </tr>
                         </thead>
-                        <tbody id="onlineUsersTable">
+                        <tbody id="usersTable">
                             <tr><td colspan="4" class="loading">Загрузка...</td></tr>
                         </tbody>
                     </table>
                 </div>
+                <div class="pager" id="usersPager"></div>
             </div>
 
             <div class="dashboard-panel">
-                <h2 class="panel-title">Активные сессии</h2>
+                <div class="panel-head">
+                    <h2 class="panel-title">Сессии</h2>
+                    <div class="toolbar">
+                        <select id="sessionsStatus" class="toolbar-select">
+                            <option value="">Все статусы</option>
+                            <option value="active">Активные</option>
+                            <option value="waiting">Ожидание</option>
+                            <option value="paused">Пауза</option>
+                            <option value="ended">Завершённые</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
@@ -108,20 +148,32 @@
                                 <th>Статус</th>
                             </tr>
                         </thead>
-                        <tbody id="activeSessionsTable">
+                        <tbody id="sessionsTable">
                             <tr><td colspan="5" class="loading">Загрузка...</td></tr>
                         </tbody>
                     </table>
                 </div>
+                <div class="pager" id="sessionsPager"></div>
             </div>
 
             <div class="dashboard-panel">
-                <h2 class="panel-title">Устройства</h2>
+                <div class="panel-head">
+                    <h2 class="panel-title">Устройства</h2>
+                    <div class="toolbar">
+                        <input type="search" id="devicesSearch" class="toolbar-input" placeholder="Поиск по имени / ключу…" autocomplete="off">
+                        <select id="devicesStatus" class="toolbar-select">
+                            <option value="">Все статусы</option>
+                            <option value="active">Активные</option>
+                            <option value="maintenance">Обслуживание</option>
+                            <option value="offline">Оффлайн</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>ID Устройства</th>
+                                <th>Имя / ID</th>
                                 <th>Ключ</th>
                                 <th>Статус</th>
                                 <th>Последний визит</th>
@@ -132,10 +184,12 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="pager" id="devicesPager"></div>
             </div>
         </div>
     </div>
 
+    <script src="/static/js/vendor/minichart.js"></script>
     <script src="/static/js/dashboard.js" defer></script>
 </body>
 </html>

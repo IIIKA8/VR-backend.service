@@ -182,6 +182,8 @@ const deviceRoutes = require('./routes/devices');
 const usagePeriodRoutes = require('./routes/usagePeriods');
 const authRoutes = require('./routes/auth');
 const doctorRoutes = require('./routes/doctor');
+const patientRoutes = require('./routes/patient');
+const vrRoutes = require('./routes/vr');
 
 // API маршруты ПЕРЕД статикой
 app.use('/api/users', userRoutes);
@@ -197,6 +199,7 @@ app.use('/api/licenses', (req, res, next) => {
 app.use('/api/devices', deviceRoutes);
 app.use('/api/usage-periods', usagePeriodRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/vr', vrRoutes);
 
 // --- API авторизации админки --- //
 const PASSWORD_KEYLEN = 64;
@@ -316,6 +319,42 @@ async function doctorGuard(req, res, next) {
   }
 }
 
+// Кабинет пациента — авторизованные пользователи без роли админа/врача
+// (пациенты реабилитации и ещё не назначенные аккаунты).
+async function patientGuard(req, res, next) {
+  try {
+    const userId = req.session?.userId;
+    const isApi = req.originalUrl.startsWith('/api');
+    if (!userId) {
+      if (isApi) return res.status(401).json({ error: 'Требуется вход' });
+      return res.redirect('/auth?next=/patient');
+    }
+    const user = await User.findById(userId).select('+isAdmin +isDoctor');
+    if (!user) {
+      req.session.destroy(() => {});
+      if (isApi) return res.status(401).json({ error: 'Требуется вход' });
+      return res.redirect('/auth?next=/patient');
+    }
+    // Админов и врачей уводим в их собственные разделы
+    if (user.isAdmin) {
+      if (isApi) return res.status(403).json({ error: 'Используйте админ-панель' });
+      return res.redirect('/');
+    }
+    if (user.isDoctor) {
+      if (isApi) return res.status(403).json({ error: 'Используйте кабинет врача' });
+      return res.redirect('/doctor');
+    }
+    req.patientUser = user;
+    return next();
+  } catch (error) {
+    console.error('patientGuard:', error);
+    if (req.originalUrl.startsWith('/api')) {
+      return res.status(500).json({ error: 'Ошибка проверки доступа' });
+    }
+    return res.redirect('/auth?next=/patient');
+  }
+}
+
 // --- Использование защиты --- //
 // Защищаем html (админка)
 app.get('/admin', adminGuard, (req, res) => {
@@ -333,6 +372,13 @@ app.use('/api/doctor', doctorGuard, doctorRoutes);
 
 app.get('/doctor', doctorGuard, (req, res) => {
   res.sendFile(path.join(__dirname, 'web/views/doctor.html'));
+});
+
+// Кабинет пациента (личный) — только свои данные
+app.use('/api/patient', patientGuard, patientRoutes);
+
+app.get('/patient', patientGuard, (req, res) => {
+  res.sendFile(path.join(__dirname, 'web/views/patient.html'));
 });
 // (можно добавить аналогичную защиту для других admin страниц)
 
@@ -370,6 +416,7 @@ const VRScene = require('./models/VRScene');
 const VRSession = require('./models/VRSession');
 const License = require('./models/License');
 const Device = require('./models/Device');
+const VRExerciseResult = require('./models/VRExerciseResult');
 
 // API endpoint для статистики (ПЕРЕД обработчиком 404!)
 app.get('/api/stats', async (req, res) => {
@@ -386,6 +433,59 @@ app.get('/api/stats', async (req, res) => {
   } catch (error) {
     console.error('Ошибка получения статистики:', error);
     res.status(500).json({ error: 'Ошибка получения статистики' });
+  }
+});
+
+// Сводка для графиков дашборда (только админ)
+app.get('/api/dashboard/summary', adminGuard, async (req, res) => {
+  try {
+    const now = new Date();
+    const days = 7;
+    const start = new Date(now.getTime() - (days - 1) * 86400000);
+    start.setHours(0, 0, 0, 0);
+
+    // Сессии за последние 7 дней по дням
+    const sessionsAgg = await VRSession.aggregate([
+      { $match: { startedAt: { $gte: start } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$startedAt' } }, count: { $sum: 1 } } }
+    ]);
+    // Упражнения за последние 7 дней по дням
+    const resultsAgg = await VRExerciseResult.aggregate([
+      { $match: { startedAt: { $gte: start } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$startedAt' } }, count: { $sum: 1 } } }
+    ]);
+    // Упражнения по режимам (всего)
+    const byModeAgg = await VRExerciseResult.aggregate([
+      { $group: { _id: '$exerciseMode', count: { $sum: 1 } } }
+    ]);
+
+    const labels = [];
+    const sessionsSeries = [];
+    const resultsSeries = [];
+    const sMap = Object.fromEntries(sessionsAgg.map((d) => [d._id, d.count]));
+    const rMap = Object.fromEntries(resultsAgg.map((d) => [d._id, d.count]));
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start.getTime() + i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      labels.push(d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }));
+      sessionsSeries.push(sMap[key] || 0);
+      resultsSeries.push(rMap[key] || 0);
+    }
+
+    const MODE_LABELS = { conveyor: 'Конвейер', tea: 'Чай', drum: 'Барабан' };
+    const modeOrder = ['conveyor', 'tea', 'drum'];
+    const modeMap = Object.fromEntries(byModeAgg.map((m) => [m._id, m.count]));
+    const byMode = modeOrder.map((m) => ({ mode: m, label: MODE_LABELS[m], count: modeMap[m] || 0 }));
+
+    res.json({
+      labels,
+      sessionsSeries,
+      resultsSeries,
+      byMode
+    });
+  } catch (error) {
+    console.error('Ошибка сводки дашборда:', error);
+    res.status(500).json({ error: 'Ошибка сводки' });
   }
 });
 
@@ -414,20 +514,30 @@ app.use('/static', (req, res, next) => {
   next();
 });
 
-// главная страница дашборда (врачей без админки — в кабинет врача)
+// главная страница дашборда — ТОЛЬКО для админа.
+// Врачей уводим в кабинет врача, пациентов/без роли — в личный кабинет.
 app.get('/', async (req, res) => {
   try {
     const uid = req.session?.userId;
-    if (uid) {
-      const u = await User.findById(uid).select('isDoctor isAdmin');
-      if (u && u.isDoctor && !u.isAdmin) {
-        return res.redirect(302, '/doctor');
-      }
+    if (!uid) {
+      return res.redirect('/auth');
     }
+    const u = await User.findById(uid).select('+isAdmin +isDoctor');
+    if (!u) {
+      req.session.destroy(() => {});
+      return res.redirect('/auth');
+    }
+    if (u.isAdmin) {
+      return res.sendFile(path.join(__dirname, 'web/views/index.html'));
+    }
+    if (u.isDoctor) {
+      return res.redirect(302, '/doctor');
+    }
+    return res.redirect(302, '/patient');
   } catch (e) {
     console.error('GET / redirect:', e);
+    return res.redirect('/auth');
   }
-  res.sendFile(path.join(__dirname, 'web/views/index.html'));
 });
 
 // Обработка 404 для API (ПОСЛЕ всех API маршрутов!)

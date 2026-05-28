@@ -5,6 +5,8 @@ const VRSession = require('../models/VRSession');
 const UsagePeriod = require('../models/UsagePeriod');
 const Device = require('../models/Device');
 const MedicalNote = require('../models/MedicalNote');
+const VRExerciseResult = require('../models/VRExerciseResult');
+const { listResults, computeAnalytics } = require('../util/rehabAnalytics');
 
 const router = express.Router();
 
@@ -64,20 +66,41 @@ router.get('/overview', async (req, res) => {
       startDate: { $lte: now }
     });
 
-    const [sessionsWeek, notesCount] = await Promise.all([
+    const [sessionsWeek, notesCount, resultsWeek, painAgg] = await Promise.all([
       VRSession.countDocuments({
         host: { $in: patientIds },
         startedAt: { $gte: weekAgo }
       }),
-      MedicalNote.countDocuments({ doctor: doctorId })
+      MedicalNote.countDocuments({ doctor: doctorId }),
+      VRExerciseResult.countDocuments({
+        patient: { $in: patientIds },
+        startedAt: { $gte: weekAgo }
+      }),
+      VRExerciseResult.aggregate([
+        { $match: { patient: { $in: patientIds } } },
+        {
+          $group: {
+            _id: null,
+            avgBefore: { $avg: '$painBefore' },
+            avgAfter: { $avg: '$painAfter' }
+          }
+        }
+      ])
     ]);
+
+    const pain = painAgg[0] || {};
+    const round1 = (v) => (v != null ? Math.round(v * 10) / 10 : null);
 
     res.json({
       patientsTotal: patientIds.length,
       vrSessionsLast7Days: sessionsWeek,
       medicalNotesTotal: notesCount,
       activePeriodDevicesApprox: periodDevices.length,
-      _hint: 'Расширенная аналитика — позже'
+      exerciseResultsLast7Days: resultsWeek,
+      avgPainDelta:
+        pain.avgBefore != null && pain.avgAfter != null
+          ? round1(pain.avgBefore - pain.avgAfter)
+          : null
     });
   } catch (e) {
     console.error(e);
@@ -165,6 +188,44 @@ router.get('/patients/:patientId/sessions', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Ошибка сессий' });
+  }
+});
+
+/** GET /api/doctor/patients/:patientId/results — результаты упражнений (пагинация) */
+router.get('/patients/:patientId/results', async (req, res) => {
+  try {
+    const doctorId = req.session.userId;
+    const p = await getPatientForDoctor(req.params.patientId, doctorId);
+    if (!p) {
+      return res.status(404).json({ error: 'Пациент не найден' });
+    }
+    const data = await listResults(p._id, {
+      mode: req.query.mode,
+      from: req.query.from,
+      to: req.query.to,
+      page: req.query.page,
+      limit: req.query.limit
+    });
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Ошибка результатов' });
+  }
+});
+
+/** GET /api/doctor/patients/:patientId/analytics — агрегаты прогресса */
+router.get('/patients/:patientId/analytics', async (req, res) => {
+  try {
+    const doctorId = req.session.userId;
+    const p = await getPatientForDoctor(req.params.patientId, doctorId);
+    if (!p) {
+      return res.status(404).json({ error: 'Пациент не найден' });
+    }
+    const data = await computeAnalytics(p._id);
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Ошибка аналитики' });
   }
 });
 

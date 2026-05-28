@@ -456,6 +456,36 @@ document.getElementById('issueLicenseForm').addEventListener('submit', async (e)
     }
 });
 
+// --- Пагинация и поиск (клиентские, данные админки невелики) ---
+const ADMIN_PAGE_SIZE = 10;
+let licensesCache = [];
+let usersCache = [];
+let doctorsList = [];
+let licensesPage = 1;
+let usersPage = 1;
+
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+}
+
+function renderPager(pagerId, total, page, onGo) {
+    const pager = document.getElementById(pagerId);
+    if (!pager) return;
+    const pages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+    if (total <= ADMIN_PAGE_SIZE) { pager.innerHTML = ''; return; }
+    pager.innerHTML = `
+        <button type="button" class="pager-btn" ${page <= 1 ? 'disabled' : ''} data-go="prev">← Назад</button>
+        <span class="pager-info">Стр. ${page} из ${pages} · всего ${total}</span>
+        <button type="button" class="pager-btn" ${page >= pages ? 'disabled' : ''} data-go="next">Вперёд →</button>
+    `;
+    const prev = pager.querySelector('[data-go="prev"]');
+    const next = pager.querySelector('[data-go="next"]');
+    if (prev) prev.addEventListener('click', () => onGo(page - 1));
+    if (next) next.addEventListener('click', () => onGo(page + 1));
+}
+
 // Загрузка лицензий
 async function loadLicenses() {
     const tbody = document.getElementById('licensesTableBody');
@@ -463,42 +493,52 @@ async function loadLicenses() {
     
     try {
         const response = await fetch(`${API_BASE}/licenses/admin/all`);
-        const licenses = await response.json();
-        
-        if (licenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Нет лицензий</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = licenses.map(license => {
-            const startDate = license.startDate 
-                ? new Date(license.startDate).toLocaleDateString('ru-RU')
-                : '-';
-            const endDate = license.endDate 
-                ? new Date(license.endDate).toLocaleDateString('ru-RU')
-                : '-';
-            
-            return `
-                <tr>
-                    <td>${license.code}</td>
-                    <td>${license.lastName || '-'}</td>
-                    <td>${license.firstName || '-'}</td>
-                    <td>${license.middleName || '-'}</td>
-                    <td>${license.type}</td>
-                    <td>${startDate}</td>
-                    <td>${endDate}</td>
-                    <td>
-                        <button class="delete-btn" onclick="deleteLicense('${license._type}', '${license._id}')" title="Удалить">
-                            🗑️
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        licensesCache = await response.json();
+        renderLicenses();
     } catch (error) {
         console.error('Ошибка загрузки лицензий:', error);
         tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Ошибка загрузки лицензий</td></tr>';
     }
+}
+
+function renderLicenses() {
+    const tbody = document.getElementById('licensesTableBody');
+    const q = (document.getElementById('licensesSearch')?.value || '').toLowerCase().trim();
+    const filtered = licensesCache.filter((l) => {
+        if (!q) return true;
+        const hay = [l.code, l.lastName, l.firstName, l.middleName].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(q);
+    });
+
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Нет лицензий</td></tr>';
+        renderPager('licensesPager', 0, 1, () => {});
+        return;
+    }
+
+    const pages = Math.max(1, Math.ceil(filtered.length / ADMIN_PAGE_SIZE));
+    if (licensesPage > pages) licensesPage = pages;
+    const start = (licensesPage - 1) * ADMIN_PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + ADMIN_PAGE_SIZE);
+
+    tbody.innerHTML = pageItems.map((license) => {
+        const startDate = license.startDate ? new Date(license.startDate).toLocaleDateString('ru-RU') : '-';
+        const endDate = license.endDate ? new Date(license.endDate).toLocaleDateString('ru-RU') : '-';
+        return `
+            <tr>
+                <td>${escapeHtml(license.code)}</td>
+                <td>${escapeHtml(license.lastName || '-')}</td>
+                <td>${escapeHtml(license.firstName || '-')}</td>
+                <td>${escapeHtml(license.middleName || '-')}</td>
+                <td>${escapeHtml(license.type)}</td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td>
+                    <button class="delete-btn" onclick="deleteLicense('${license._type}', '${license._id}')" title="Удалить">🗑️</button>
+                </td>
+            </tr>`;
+    }).join('');
+    renderPager('licensesPager', filtered.length, licensesPage, (p) => { licensesPage = p; renderLicenses(); });
 }
 
 // Удаление лицензии
@@ -525,51 +565,115 @@ async function deleteLicense(type, id) {
     }
 }
 
+// Загрузка списка врачей (для выбора лечащего врача)
+async function loadDoctors() {
+    try {
+        const response = await fetch(`${API_BASE}/users?role=doctor`);
+        doctorsList = await response.json();
+    } catch (error) {
+        console.error('Ошибка загрузки врачей:', error);
+        doctorsList = [];
+    }
+}
+
+function fullNameOf(u) {
+    return [u.lastName, u.firstName, u.middleName].filter(Boolean).join(' ') || u.username || u.email || '—';
+}
+
 // Загрузка пользователей в таблицу
 async function loadUsersTable() {
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Загрузка...</td></tr>';
-    
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Загрузка...</td></tr>';
     try {
-        const response = await fetch(`${API_BASE}/users`);
-        const users = await response.json();
-        
-        if (users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Нет пользователей</td></tr>';
-            return;
-        }
-        
-        tbody.innerHTML = users.map(user => {
-            const lastName = user.lastName || '-';
-            const firstName = user.firstName || '-';
-            const middleName = user.middleName || '-';
-            const age = user.age ? `${user.age} лет` : '-';
-            const status = user.isOnline 
-                ? '<span class="status-badge status-online">Онлайн</span>'
-                : '<span class="status-badge status-offline">Оффлайн</span>';
-            const lastSeen = user.lastSeen 
-                ? new Date(user.lastSeen).toLocaleString('ru-RU')
-                : 'Никогда';
-            
-            return `
-                <tr>
-                    <td>${lastName}</td>
-                    <td>${firstName}</td>
-                    <td>${middleName}</td>
-                    <td>${age}</td>
-                    <td>${status}</td>
-                    <td>${lastSeen}</td>
-                    <td>
-                        <button class="delete-btn" onclick="deleteUser('${user._id}')" title="Удалить">
-                            🗑️
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+        const [usersRes] = await Promise.all([fetch(`${API_BASE}/users`), loadDoctors()]);
+        usersCache = await usersRes.json();
+        renderUsersTable();
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Ошибка загрузки пользователей</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Ошибка загрузки пользователей</td></tr>';
+    }
+}
+
+function renderUsersTable() {
+    const tbody = document.getElementById('usersTableBody');
+    const q = (document.getElementById('usersSearch')?.value || '').toLowerCase().trim();
+    const filtered = usersCache.filter((u) => !q || fullNameOf(u).toLowerCase().includes(q));
+
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Нет пользователей</td></tr>';
+        renderPager('usersPager', 0, 1, () => {});
+        return;
+    }
+
+    const pages = Math.max(1, Math.ceil(filtered.length / ADMIN_PAGE_SIZE));
+    if (usersPage > pages) usersPage = pages;
+    const start = (usersPage - 1) * ADMIN_PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + ADMIN_PAGE_SIZE);
+
+    const doctorOptions = (selectedId) => {
+        const opts = ['<option value="">— не назначен —</option>'];
+        doctorsList.forEach((d) => {
+            const sel = String(selectedId) === String(d._id) ? ' selected' : '';
+            opts.push(`<option value="${d._id}"${sel}>${escapeHtml(fullNameOf(d))}</option>`);
+        });
+        return opts.join('');
+    };
+
+    tbody.innerHTML = pageItems.map((user) => {
+        const status = user.isOnline
+            ? '<span class="status-badge status-online">Онлайн</span>'
+            : '<span class="status-badge status-offline">Оффлайн</span>';
+        const assigned = user.assignedDoctor || '';
+        return `
+            <tr>
+                <td>${escapeHtml(user.lastName || '-')}</td>
+                <td>${escapeHtml(user.firstName || '-')}</td>
+                <td>${escapeHtml(user.middleName || '-')}</td>
+                <td>${user.age ? escapeHtml(user.age + ' лет') : '-'}</td>
+                <td>${status}</td>
+                <td style="text-align:center;">
+                    <input type="checkbox" class="patient-toggle" data-id="${user._id}" ${user.isPatient ? 'checked' : ''}>
+                </td>
+                <td>
+                    <select class="form-control doctor-select" data-id="${user._id}">${doctorOptions(assigned)}</select>
+                </td>
+                <td>
+                    <button class="delete-btn" onclick="deleteUser('${user._id}')" title="Удалить">🗑️</button>
+                </td>
+            </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.patient-toggle').forEach((cb) => {
+        cb.addEventListener('change', () => updateUser(cb.dataset.id, { isPatient: cb.checked }));
+    });
+    tbody.querySelectorAll('.doctor-select').forEach((sel) => {
+        sel.addEventListener('change', () => updateUser(sel.dataset.id, { assignedDoctor: sel.value || null }));
+    });
+
+    renderPager('usersPager', filtered.length, usersPage, (p) => { usersPage = p; renderUsersTable(); });
+}
+
+// Обновление полей пользователя (роль пациента / лечащий врач)
+async function updateUser(id, patch) {
+    try {
+        const res = await fetch(`${API_BASE}/users/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(patch)
+        });
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            alert('Ошибка сохранения: ' + (e.error || res.status));
+            loadUsersTable();
+            return;
+        }
+        const updated = await res.json();
+        const idx = usersCache.findIndex((u) => String(u._id) === String(id));
+        if (idx >= 0) usersCache[idx] = { ...usersCache[idx], ...updated };
+    } catch (error) {
+        console.error('Ошибка обновления пользователя:', error);
+        alert('Ошибка соединения');
     }
 }
 
@@ -635,9 +739,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Инициализация вкладок
     initTableTabs();
     
-    // Инициализация поиска пользователей
+    // Инициализация поиска пользователей (в форме выдачи лицензии)
     initUserSearch();
-    
+
+    // Поиск в таблицах
+    const licSearch = document.getElementById('licensesSearch');
+    if (licSearch) licSearch.addEventListener('input', () => { licensesPage = 1; renderLicenses(); });
+    const usrSearch = document.getElementById('usersSearch');
+    if (usrSearch) usrSearch.addEventListener('input', () => { usersPage = 1; renderUsersTable(); });
+
     // Загрузка данных
     loadDevices();
     loadUsers();

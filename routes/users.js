@@ -9,11 +9,45 @@ router.use((req, res, next) => {
   next();
 });
 
-// Получить всех пользователей
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Получить пользователей.
+// Без query — массив (обратная совместимость). С ?page — объект пагинации.
+// Поддержка: ?search= (ФИО/username/email), ?status=online|offline, ?role=patient|doctor|admin
 router.get('/', async (req, res) => {
   try {
-    const users = await User.find().select('-__v').sort({ lastSeen: -1 });
-    res.json(users);
+    const { page, limit, search, status, role } = req.query;
+    const filter = {};
+    if (search) {
+      const rx = new RegExp(escapeRegex(search), 'i');
+      filter.$or = [
+        { lastName: rx }, { firstName: rx }, { middleName: rx },
+        { username: rx }, { email: rx }
+      ];
+    }
+    if (status === 'online') filter.isOnline = true;
+    else if (status === 'offline') filter.isOnline = false;
+    if (role === 'patient') filter.isPatient = true;
+    else if (role === 'doctor') filter.isDoctor = true;
+    else if (role === 'admin') filter.isAdmin = true;
+
+    const baseQuery = User.find(filter).select('-__v').sort({ lastSeen: -1 });
+
+    if (page === undefined) {
+      const users = await baseQuery;
+      return res.json(users);
+    }
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const lim = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (p - 1) * lim;
+    const [items, total] = await Promise.all([
+      baseQuery.skip(skip).limit(lim),
+      User.countDocuments(filter)
+    ]);
+    res.json({ items, total, page: p, pages: Math.max(1, Math.ceil(total / lim)), limit: lim });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка при получении пользователей' });
   }

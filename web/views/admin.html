@@ -19,7 +19,10 @@
 
     <div class="container">
         <header class="admin-header">
-            <h1 class="title">VR Backend - Админка</h1>
+            <div class="admin-title-block">
+                <h1 class="title">Админ-панель</h1>
+                <p class="admin-subtitle">Управление пользователями, лицензиями и назначениями VR-реабилитации</p>
+            </div>
             <nav class="nav-tabs">
                 <div class="user-menu">
                     <button id="userMenuToggle" class="user-menu-toggle" type="button">
@@ -125,6 +128,9 @@
             <!-- Таблица лицензий -->
             <div id="licensesTab" class="table-content active">
                 <h2 class="panel-title">Лицензии</h2>
+                <div class="admin-toolbar">
+                    <input type="search" id="licensesSearch" class="admin-search" placeholder="Поиск по ФИО / коду…" autocomplete="off">
+                </div>
                 <div class="table-container">
                     <table id="licensesTable" class="licenses-table">
                         <thead>
@@ -146,11 +152,16 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="pager" id="licensesPager"></div>
             </div>
             
             <!-- Таблица пользователей -->
             <div id="usersTab" class="table-content">
                 <h2 class="panel-title">Пользователи</h2>
+                <div class="admin-toolbar">
+                    <input type="search" id="usersSearch" class="admin-search" placeholder="Поиск по ФИО…" autocomplete="off">
+                    <span class="admin-toolbar-hint">Отметьте «Пациент» и выберите лечащего врача, чтобы открыть пациенту кабинет.</span>
+                </div>
                 <div class="table-container">
                     <table id="usersTable" class="licenses-table">
                         <thead>
@@ -160,17 +171,19 @@
                                 <th>Отчество</th>
                                 <th>Возраст</th>
                                 <th>Статус</th>
-                                <th>Последний визит</th>
+                                <th>Пациент</th>
+                                <th>Лечащий врач</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
                             <tr>
-                                <td colspan="7" class="loading">Загрузка...</td>
+                                <td colspan="8" class="loading">Загрузка...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <div class="pager" id="usersPager"></div>
             </div>
         </div>
     </div>

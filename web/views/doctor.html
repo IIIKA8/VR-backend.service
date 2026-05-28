@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Реабилитация VR — кабинет врача</title>
+    <link rel="stylesheet" href="/static/css/minichart.css">
     <link rel="stylesheet" href="/static/css/doctor.css">
 </head>
 <body>
@@ -23,18 +24,19 @@
         <nav class="doctor-tabs">
             <button type="button" class="doctor-tab active" data-tab="overview">Обзор</button>
             <button type="button" class="doctor-tab" data-tab="patients">Пациенты</button>
-            <button type="button" class="doctor-tab" data-tab="analytics" disabled title="Скоро">Аналитика</button>
+            <button type="button" class="doctor-tab" data-tab="analytics">Аналитика</button>
         </nav>
 
         <main class="doctor-main">
             <section id="panel-overview" class="doctor-panel active">
                 <div class="stats-grid" id="overviewStats">
                     <div class="stat-card"><span class="stat-value" id="st-patients">—</span><span class="stat-label">Пациентов</span></div>
-                    <div class="stat-card"><span class="stat-value" id="st-sessions">—</span><span class="stat-label">VR-сессий за 7 дней</span></div>
+                    <div class="stat-card"><span class="stat-value" id="st-results">—</span><span class="stat-label">Упражнений за 7 дней</span></div>
+                    <div class="stat-card"><span class="stat-value" id="st-pain">—</span><span class="stat-label">Среднее снижение боли (ВАШ)</span></div>
                     <div class="stat-card"><span class="stat-value" id="st-notes">—</span><span class="stat-label">Медзаписей</span></div>
                     <div class="stat-card"><span class="stat-value" id="st-devices">—</span><span class="stat-label">Активных назначений устройств</span></div>
                 </div>
-                <p class="hint">Расширенная статистика и отчёты подключим на следующем этапе.</p>
+                <p class="hint">Данные поступают с VR-очков после каждого упражнения (режимы «Конвейер», «Чай», «Барабан»). Подробная динамика — во вкладке «Аналитика» и в карточке пациента.</p>
             </section>
 
             <section id="panel-patients" class="doctor-panel">
@@ -55,11 +57,32 @@
                         <tbody id="patientsBody"></tbody>
                     </table>
                 </div>
+                <div class="pager" id="patientsPager"></div>
                 <p id="patientsEmpty" class="empty-msg hidden">Нет закреплённых пациентов. Назначение выполняет администратор (поле «лечащий врач» в учётной записи пациента).</p>
             </section>
 
             <section id="panel-analytics" class="doctor-panel">
-                <p class="hint">Раздел в разработке.</p>
+                <div class="toolbar analytics-toolbar">
+                    <label for="analyticsPatient">Пациент:</label>
+                    <select id="analyticsPatient" class="select-control"></select>
+                </div>
+                <div id="analyticsBody" class="analytics-body hidden">
+                    <div class="stats-grid">
+                        <div class="stat-card"><span class="stat-value" id="an-total">—</span><span class="stat-label">Всего упражнений</span></div>
+                        <div class="stat-card"><span class="stat-value" id="an-score">—</span><span class="stat-label">Средний балл</span></div>
+                        <div class="stat-card"><span class="stat-value" id="an-pain">—</span><span class="stat-label">Снижение боли (ВАШ)</span></div>
+                        <div class="stat-card"><span class="stat-value" id="an-adher">—</span><span class="stat-label">Упражнений за 7 дней</span></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Динамика: балл и уровень боли по сессиям</h3>
+                        <div id="chartProgress" class="chart-host"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Средний балл по режимам</h3>
+                        <div id="chartModes" class="chart-host"></div>
+                    </div>
+                </div>
+                <p id="analyticsEmpty" class="empty-msg hidden">У пациента пока нет результатов упражнений.</p>
             </section>
         </main>
     </div>
@@ -84,6 +107,18 @@
                 <button type="button" class="btn-primary" id="addNote">Добавить запись</button>
             </div>
             <div class="drawer-section">
+                <h3>Результаты тренировок (VR-очки)</h3>
+                <div id="drawerProgress" class="chart-host chart-host-sm"></div>
+                <div class="table-wrap">
+                    <table class="doctor-table compact">
+                        <thead>
+                            <tr><th>Дата</th><th>Режим</th><th>Балл</th><th>Боль до/после</th></tr>
+                        </thead>
+                        <tbody id="resultsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="drawer-section">
                 <h3>VR-сессии (последние)</h3>
                 <ul id="sessionsList" class="mini-list"></ul>
             </div>
@@ -94,6 +129,7 @@
         </div>
     </aside>
 
+    <script src="/static/js/vendor/minichart.js"></script>
     <script src="/static/js/doctor.js"></script>
 </body>
 </html>

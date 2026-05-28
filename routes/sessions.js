@@ -2,16 +2,37 @@ const express = require('express');
 const router = express.Router();
 const VRSession = require('../models/VRSession');
 
-// Список всех сессий (для дашборда)
+// Список сессий (для дашборда).
+// Без query — массив (обратная совместимость). С ?page — объект пагинации.
+// Поддержка: ?status=waiting|active|paused|ended
 router.get('/', async (req, res) => {
   try {
-    const sessions = await VRSession.find()
+    const { page, limit, status } = req.query;
+    const filter = {};
+    if (['waiting', 'active', 'paused', 'ended'].includes(status)) {
+      filter.status = status;
+    }
+
+    const baseQuery = VRSession.find(filter)
       .populate('scene', 'name description')
-      .populate('host', 'username avatar')
+      .populate('host', 'username lastName firstName middleName avatar')
       .populate('participants.user', 'username avatar')
       .select('-__v')
       .sort({ startedAt: -1 });
-    res.json(sessions);
+
+    if (page === undefined) {
+      const sessions = await baseQuery;
+      return res.json(sessions);
+    }
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const lim = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (p - 1) * lim;
+    const [items, total] = await Promise.all([
+      baseQuery.skip(skip).limit(lim),
+      VRSession.countDocuments(filter)
+    ]);
+    res.json({ items, total, page: p, pages: Math.max(1, Math.ceil(total / lim)), limit: lim });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка при получении сессий' });
   }

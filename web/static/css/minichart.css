@@ -1,0 +1,33 @@
+/* Общие стили для MiniChart (используется на дашборде, у врача и пациента) */
+.minichart { width: 100%; height: auto; }
+
+.minichart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: #8b9cb3;
+  font-size: 0.9rem;
+}
+
+.minichart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #8b9cb3;
+}
+
+.minichart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.minichart-legend-item i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}

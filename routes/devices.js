@@ -181,11 +181,40 @@ router.post('/check', async (req, res) => {
   }
 });
 
-// Список всех устройств
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Список устройств.
+// Без query — массив (обратная совместимость). С ?page — объект пагинации.
+// Поддержка: ?search= (имя/ключ/deviceId), ?status=active|maintenance|offline
 router.get('/', async (req, res) => {
   try {
-    const devices = await Device.find().sort({ createdAt: -1 });
-    res.json(devices);
+    const { page, limit, search, status } = req.query;
+    const filter = {};
+    if (search) {
+      const rx = new RegExp(escapeRegex(search), 'i');
+      filter.$or = [{ name: rx }, { key: rx }, { deviceId: rx }];
+    }
+    if (['active', 'maintenance', 'offline'].includes(status)) {
+      filter.status = status;
+    }
+
+    const baseQuery = Device.find(filter).sort({ createdAt: -1 });
+
+    if (page === undefined) {
+      const devices = await baseQuery;
+      return res.json(devices);
+    }
+
+    const p = Math.max(1, parseInt(page, 10) || 1);
+    const lim = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (p - 1) * lim;
+    const [items, total] = await Promise.all([
+      baseQuery.skip(skip).limit(lim),
+      Device.countDocuments(filter)
+    ]);
+    res.json({ items, total, page: p, pages: Math.max(1, Math.ceil(total / lim)), limit: lim });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка получения устройств' });
   }

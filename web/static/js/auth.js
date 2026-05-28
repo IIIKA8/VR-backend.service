@@ -46,9 +46,9 @@ async function loginSubmit(e) {
             window.location.href = next;
             return;
         }
-        if (data.isAdmin) window.location.href = '/admin';
+        if (data.isAdmin) window.location.href = '/';
         else if (data.isDoctor) window.location.href = '/doctor';
-        else window.location.href = '/';
+        else window.location.href = '/patient';
     } catch (error) {
         setMessage(message, 'Ошибка соединения с сервером');
     }
@@ -101,7 +101,8 @@ async function registerSubmit(e) {
             if (next) {
                 window.location.href = next;
             } else {
-                window.location.href = '/';
+                // Новый аккаунт — без роли, ведём в личный кабинет
+                window.location.href = '/patient';
             }
         }, 800);
     } catch (error) {

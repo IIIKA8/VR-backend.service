@@ -469,6 +469,57 @@ body {
 }
 .login-error { color: #d00; margin-top: 10px; }
 
+/* Подзаголовок шапки */
+.admin-title-block { display: flex; flex-direction: column; gap: 4px; }
+.admin-subtitle { color: #6b7280; font-size: 14px; margin: 0; }
+
+/* Тулбар таблиц */
+.admin-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.admin-search {
+    padding: 9px 12px;
+    border: 1px solid #34495e;
+    border-radius: 6px;
+    background: #34495e;
+    color: #ecf0f1;
+    font-size: 14px;
+    min-width: 240px;
+}
+.admin-search::placeholder { color: #95a5a6; }
+.admin-search:focus { outline: none; border-color: #3498db; background: #3d566e; }
+.admin-toolbar-hint { color: #95a5a6; font-size: 13px; }
+
+/* Селект лечащего врача в таблице */
+.doctor-select { min-width: 180px; padding: 7px 10px; }
+.patient-toggle { width: 18px; height: 18px; cursor: pointer; }
+
+/* Пагинация (тёмная панель) */
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 16px;
+}
+.pager-btn {
+    background: #34495e;
+    border: 1px solid #2c3e50;
+    color: #ecf0f1;
+    border-radius: 6px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+.pager-btn:hover:not(:disabled) { background: #3d566e; border-color: #3498db; }
+.pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager-info { color: #bdc3c7; font-size: 14px; }
+
 @media (max-width: 768px) {
     .admin-header {
         flex-direction: column;

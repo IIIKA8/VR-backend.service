@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Реабилитация VR — личный кабинет</title>
+    <link rel="stylesheet" href="/static/css/minichart.css">
+    <link rel="stylesheet" href="/static/css/patient.css">
+</head>
+<body>
+    <div class="patient-layout">
+        <header class="patient-header">
+            <div class="patient-brand">
+                <h1>Личный кабинет</h1>
+                <p class="patient-sub">VR-реабилитация · ваши тренировки и прогресс</p>
+            </div>
+            <div class="patient-user">
+                <span id="patientWelcome"></span>
+                <button type="button" id="patientLogout" class="btn-secondary">Выйти</button>
+            </div>
+        </header>
+
+        <!-- Режим ожидания назначения врача -->
+        <section id="waitingBanner" class="waiting-banner hidden">
+            <h2>Аккаунт ожидает назначения</h2>
+            <p>Ваша учётная запись зарегистрирована, но ещё не закреплена за лечащим врачом.
+               После назначения здесь появятся ваши программы реабилитации и результаты VR-тренировок.</p>
+        </section>
+
+        <main id="patientMain" class="patient-main hidden">
+            <section class="card doctor-card">
+                <h3>Лечащий врач</h3>
+                <p id="doctorName">—</p>
+                <div id="conditionWrap" class="condition-wrap hidden">
+                    <span class="condition-label">Клинический контекст:</span>
+                    <span id="conditionSummary"></span>
+                </div>
+            </section>
+
+            <div class="stats-grid">
+                <div class="stat-card"><span class="stat-value" id="st-total">—</span><span class="stat-label">Всего тренировок</span></div>
+                <div class="stat-card"><span class="stat-value" id="st-score">—</span><span class="stat-label">Средний балл</span></div>
+                <div class="stat-card"><span class="stat-value" id="st-pain">—</span><span class="stat-label">Снижение боли (ВАШ)</span></div>
+                <div class="stat-card"><span class="stat-value" id="st-week">—</span><span class="stat-label">Тренировок за 7 дней</span></div>
+            </div>
+
+            <section class="card">
+                <h3>Динамика: балл и уровень боли</h3>
+                <div id="chartProgress" class="chart-host"></div>
+            </section>
+
+            <section class="card">
+                <h3>Средний балл по режимам</h3>
+                <div id="chartModes" class="chart-host"></div>
+            </section>
+
+            <section class="card">
+                <div class="card-head">
+                    <h3>Мои результаты</h3>
+                    <select id="modeFilter" class="select-control">
+                        <option value="">Все режимы</option>
+                        <option value="conveyor">Конвейер</option>
+                        <option value="tea">Чай</option>
+                        <option value="drum">Барабан</option>
+                    </select>
+                </div>
+                <div class="table-wrap">
+                    <table class="patient-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Режим</th>
+                                <th>Балл</th>
+                                <th>Точность</th>
+                                <th>Боль до/после</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody"><tr><td colspan="5">Загрузка…</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="pager" id="resultsPager"></div>
+            </section>
+
+            <section class="card">
+                <h3>Записи врача</h3>
+                <ul id="notesList" class="notes-list"></ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/js/vendor/minichart.js"></script>
+    <script src="/static/js/patient.js"></script>
+</body>
+</html>

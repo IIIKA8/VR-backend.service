@@ -302,6 +302,31 @@ body {
     color: #c0392b;
 }
 
+.user-actions {
+    white-space: nowrap;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #2980b9;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 5px 8px;
+    transition: color 0.3s;
+}
+
+.btn-link:hover {
+    color: #1c5980;
+}
+
+.no-password-hint {
+    display: inline-block;
+    margin: 0 6px;
+    font-size: 11px;
+    color: #e67e22;
+}
+
 .empty-state {
     text-align: center;
     color: #95a5a6;

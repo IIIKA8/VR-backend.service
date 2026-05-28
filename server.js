@@ -385,6 +385,105 @@ app.get('/patient', patientGuard, (req, res) => {
 // Пример: защищённый эндпоинт admin-api
 app.use('/api/admin', adminGuard);
 
+// --- Управление ролями пользователей (только для админа) --- //
+
+// Список пользователей с ролями для таблицы админки.
+// Открытый /api/users не отдаёт isAdmin/isDoctor (select:false), поэтому здесь отдельный защищённый список.
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('+isAdmin +isDoctor +passwordHash')
+      .sort({ lastSeen: -1 });
+    const result = users.map((u) => ({
+      _id: u._id,
+      lastName: u.lastName,
+      firstName: u.firstName,
+      middleName: u.middleName,
+      age: u.age,
+      username: u.username,
+      email: u.email,
+      isOnline: u.isOnline,
+      isPatient: !!u.isPatient,
+      isDoctor: !!u.isDoctor,
+      isAdmin: !!u.isAdmin,
+      assignedDoctor: u.assignedDoctor,
+      hasPassword: !!u.passwordHash
+    }));
+    res.json(result);
+  } catch (error) {
+    console.error('Ошибка получения пользователей (admin):', error);
+    res.status(500).json({ error: 'Ошибка при получении пользователей' });
+  }
+});
+
+// Изменение ролей пользователя. Тело: { isPatient?, isDoctor?, isAdmin? } (булевы, любые из).
+app.patch('/api/admin/users/:id/roles', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const body = req.body || {};
+    const patch = {};
+    if (typeof body.isPatient === 'boolean') patch.isPatient = body.isPatient;
+    if (typeof body.isDoctor === 'boolean') patch.isDoctor = body.isDoctor;
+    if (typeof body.isAdmin === 'boolean') patch.isAdmin = body.isAdmin;
+
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'Не указаны роли для изменения' });
+    }
+
+    const user = await User.findById(id).select('+isAdmin +isDoctor');
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Защита от блокировки доступа в админку
+    if (patch.isAdmin === false && user.isAdmin) {
+      if (String(req.session?.adminUserId) === String(id)) {
+        return res.status(400).json({ error: 'Нельзя снять роль администратора с самого себя' });
+      }
+      const adminsCount = await User.countDocuments({ isAdmin: true });
+      if (adminsCount <= 1) {
+        return res.status(400).json({ error: 'Нельзя снять роль с последнего администратора' });
+      }
+    }
+
+    Object.assign(user, patch);
+    await user.save();
+
+    return res.json({
+      _id: user._id,
+      isPatient: !!user.isPatient,
+      isDoctor: !!user.isDoctor,
+      isAdmin: !!user.isAdmin
+    });
+  } catch (error) {
+    console.error('Ошибка изменения ролей:', error);
+    return res.status(500).json({ error: 'Ошибка при изменении ролей' });
+  }
+});
+
+// Установка/сброс пароля пользователя (чтобы назначенный админ/врач смог войти). Тело: { password }.
+app.post('/api/admin/users/:id/password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body || {};
+    if (!password || String(password).length < 6) {
+      return res.status(400).json({ error: 'Пароль должен быть не короче 6 символов' });
+    }
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    user.passwordSalt = salt;
+    user.passwordHash = hashPassword(password, salt);
+    await user.save();
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка установки пароля:', error);
+    return res.status(500).json({ error: 'Ошибка при установке пароля' });
+  }
+});
+
 // Health check endpoint (добавляем в API)
 app.get('/api/health', (req, res) => {
   const timestamp = new Date().toISOString();

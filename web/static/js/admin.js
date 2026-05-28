@@ -583,14 +583,14 @@ function fullNameOf(u) {
 // Загрузка пользователей в таблицу
 async function loadUsersTable() {
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '<tr><td colspan="8" class="loading">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="loading">Загрузка...</td></tr>';
     try {
-        const [usersRes] = await Promise.all([fetch(`${API_BASE}/users`), loadDoctors()]);
+        const [usersRes] = await Promise.all([fetch(`${API_BASE}/admin/users`, { credentials: 'same-origin' }), loadDoctors()]);
         usersCache = await usersRes.json();
         renderUsersTable();
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Ошибка загрузки пользователей</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Ошибка загрузки пользователей</td></tr>';
     }
 }
 
@@ -600,7 +600,7 @@ function renderUsersTable() {
     const filtered = usersCache.filter((u) => !q || fullNameOf(u).toLowerCase().includes(q));
 
     if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Нет пользователей</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Нет пользователей</td></tr>';
         renderPager('usersPager', 0, 1, () => {});
         return;
     }
@@ -624,6 +624,9 @@ function renderUsersTable() {
             ? '<span class="status-badge status-online">Онлайн</span>'
             : '<span class="status-badge status-offline">Оффлайн</span>';
         const assigned = user.assignedDoctor || '';
+        const noPassword = !user.hasPassword
+            ? '<span class="no-password-hint" title="У пользователя нет пароля — он не сможет войти, пока пароль не задан">нет пароля</span>'
+            : '';
         return `
             <tr>
                 <td>${escapeHtml(user.lastName || '-')}</td>
@@ -632,25 +635,96 @@ function renderUsersTable() {
                 <td>${user.age ? escapeHtml(user.age + ' лет') : '-'}</td>
                 <td>${status}</td>
                 <td style="text-align:center;">
-                    <input type="checkbox" class="patient-toggle" data-id="${user._id}" ${user.isPatient ? 'checked' : ''}>
+                    <input type="checkbox" class="role-toggle" data-role="isPatient" data-id="${user._id}" ${user.isPatient ? 'checked' : ''}>
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" class="role-toggle" data-role="isDoctor" data-id="${user._id}" ${user.isDoctor ? 'checked' : ''}>
+                </td>
+                <td style="text-align:center;">
+                    <input type="checkbox" class="role-toggle" data-role="isAdmin" data-id="${user._id}" ${user.isAdmin ? 'checked' : ''}>
                 </td>
                 <td>
                     <select class="form-control doctor-select" data-id="${user._id}">${doctorOptions(assigned)}</select>
                 </td>
-                <td>
+                <td class="user-actions">
+                    <button class="btn-link reset-password-btn" data-id="${user._id}" title="Задать или сбросить пароль">🔑 Пароль</button>
+                    ${noPassword}
                     <button class="delete-btn" onclick="deleteUser('${user._id}')" title="Удалить">🗑️</button>
                 </td>
             </tr>`;
     }).join('');
 
-    tbody.querySelectorAll('.patient-toggle').forEach((cb) => {
-        cb.addEventListener('change', () => updateUser(cb.dataset.id, { isPatient: cb.checked }));
+    tbody.querySelectorAll('.role-toggle').forEach((cb) => {
+        cb.addEventListener('change', () => updateUserRole(cb));
     });
     tbody.querySelectorAll('.doctor-select').forEach((sel) => {
         sel.addEventListener('change', () => updateUser(sel.dataset.id, { assignedDoctor: sel.value || null }));
     });
+    tbody.querySelectorAll('.reset-password-btn').forEach((btn) => {
+        btn.addEventListener('click', () => resetUserPassword(btn.dataset.id));
+    });
 
     renderPager('usersPager', filtered.length, usersPage, (p) => { usersPage = p; renderUsersTable(); });
+}
+
+// Изменение роли через защищённый эндпоинт. cb — чекбокс с data-role/data-id.
+async function updateUserRole(cb) {
+    const id = cb.dataset.id;
+    const role = cb.dataset.role;
+    const value = cb.checked;
+    try {
+        const res = await fetch(`${API_BASE}/admin/users/${id}/roles`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ [role]: value })
+        });
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            alert('Ошибка: ' + (e.error || res.status));
+            loadUsersTable();
+            return;
+        }
+        const updated = await res.json();
+        const idx = usersCache.findIndex((u) => String(u._id) === String(id));
+        if (idx >= 0) usersCache[idx] = { ...usersCache[idx], ...updated };
+        // Назначение/снятие роли врача меняет список лечащих врачей
+        if (role === 'isDoctor') loadUsersTable();
+    } catch (error) {
+        console.error('Ошибка изменения роли:', error);
+        alert('Ошибка соединения');
+        loadUsersTable();
+    }
+}
+
+// Установка/сброс пароля пользователя
+async function resetUserPassword(id) {
+    const password = prompt('Новый пароль (не короче 6 символов):');
+    if (password === null) return;
+    if (password.length < 6) {
+        alert('Пароль должен быть не короче 6 символов');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/admin/users/${id}/password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ password })
+        });
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            alert('Ошибка: ' + (e.error || res.status));
+            return;
+        }
+        const idx = usersCache.findIndex((u) => String(u._id) === String(id));
+        if (idx >= 0) usersCache[idx] = { ...usersCache[idx], hasPassword: true };
+        renderUsersTable();
+        alert('Пароль сохранён');
+    } catch (error) {
+        console.error('Ошибка установки пароля:', error);
+        alert('Ошибка соединения');
+    }
 }
 
 // Обновление полей пользователя (роль пациента / лечащий врач)

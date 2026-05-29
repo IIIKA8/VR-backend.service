@@ -1,12 +1,13 @@
 :root {
-  --bg: #0f1419;
-  --surface: #1a2332;
-  --border: #2d3a4d;
-  --text: #e8eef7;
-  --muted: #8b9cb3;
-  --accent: #3d9dff;
-  --success: #34d399;
-  --danger: #f87171;
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --border: #d8dee8;
+  --text: #1e293b;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-dim: #1d4ed8;
+  --success: #059669;
+  --danger: #dc2626;
 }
 
 * { box-sizing: border-box; }
@@ -95,7 +96,7 @@ body {
 .chart-host { width: 100%; min-height: 200px; }
 
 .select-control {
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -117,7 +118,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
-.patient-table tbody tr:hover { background: rgba(61, 157, 255, 0.06); }
+.patient-table tbody tr:hover { background: rgba(37, 99, 235, 0.05); }
 .patient-table tbody tr:last-child td { border-bottom: none; }
 
 .pager {
@@ -128,7 +129,7 @@ body {
   margin-top: 1rem;
 }
 .pager-btn {
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: 8px;

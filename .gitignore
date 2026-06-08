@@ -52,5 +52,8 @@ temp/
 dist/
 build/
 
+# JSDoc HTML (генерируется: npm run docs)
+docs/generated/
+
 # Godot VR-клиент (храните отдельно или в другом репозитории)
 godot/

@@ -1,3 +1,7 @@
+/**
+ * @module models/User
+ * @description Модель пользователя: пациент, врач (`isDoctor`), администратор (`isAdmin`), пароль (scrypt).
+ */
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({

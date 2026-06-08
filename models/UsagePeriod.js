@@ -1,4 +1,7 @@
-// models/UsagePeriod.js
+/**
+ * @module models/UsagePeriod
+ * @description Период доступа пользователя к устройству и сцене.
+ */
 const mongoose = require('mongoose');
 
 const usagePeriodSchema = new mongoose.Schema({

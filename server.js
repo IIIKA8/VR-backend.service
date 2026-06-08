@@ -1,3 +1,22 @@
+/**
+ * @module server
+ * @description
+ * Точка входа серверного приложения: HTTP-сервер Express 5, WebSocket,
+ * подключение MongoDB, сессии, middleware и монтирование REST API.
+ *
+ * ### Middleware
+ * - JSON body, CORS, `Cache-Control: no-store`
+ * - {@link module:server~adminGuard} — доступ к `/api/admin` и админ-страницам
+ * - {@link module:server~doctorGuard} — кабинет врача `/api/doctor`, `/doctor`
+ * - {@link module:server~patientGuard} — кабинет пациента `/api/patient`, `/patient`
+ *
+ * ### Служебные эндпоинты
+ * - `GET /api/health`, `GET /health` — состояние сервера и MongoDB
+ *
+ * @see module:routes/auth
+ * @see module:vr-backend/index
+ */
+
 const express = require('express');
 const mongoose = require('mongoose');
 const http = require('http');
@@ -6,6 +25,7 @@ const cors = require('cors');
 const path = require('path');
 const { Types } = require('mongoose');
 const crypto = require('crypto');
+const { validatePasswordLength } = require('./util/userDataValidation');
 const isObjectId = (v) => Types.ObjectId.isValid(v);
 const session = require('express-session');
 
@@ -268,7 +288,15 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// Middleware для защиты админки и API админа (перед раздачей /admin)
+/**
+ * Проверяет сессию администратора (`req.session.adminUserId`).
+ * API → 401 JSON; HTML → редирект на `/auth?next=/admin`.
+ * @memberof module:server
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ * @param {Function} next
+ * @async
+ */
 async function adminGuard(req, res, next) {
   try {
     const isApiRequest = req.originalUrl.startsWith('/api');
@@ -294,7 +322,14 @@ async function adminGuard(req, res, next) {
   }
 }
 
-// Кабинет врача — только isDoctor (без админки и общего дашборда)
+/**
+ * Доступ только для пользователей с `isDoctor`.
+ * @memberof module:server
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ * @param {Function} next
+ * @async
+ */
 async function doctorGuard(req, res, next) {
   try {
     const userId = req.session?.userId;
@@ -319,8 +354,14 @@ async function doctorGuard(req, res, next) {
   }
 }
 
-// Кабинет пациента — авторизованные пользователи без роли админа/врача
-// (пациенты реабилитации и ещё не назначенные аккаунты).
+/**
+ * Кабинет пациента: авторизованный пользователь без ролей admin/doctor.
+ * @memberof module:server
+ * @param {object} req - Express request
+ * @param {object} res - Express response
+ * @param {Function} next
+ * @async
+ */
 async function patientGuard(req, res, next) {
   try {
     const userId = req.session?.userId;
@@ -479,8 +520,10 @@ app.post('/api/admin/users/:id/password', async (req, res) => {
   try {
     const { id } = req.params;
     const { password } = req.body || {};
-    if (!password || String(password).length < 6) {
-      return res.status(400).json({ error: 'Пароль должен быть не короче 6 символов' });
+    try {
+      validatePasswordLength(password);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
     }
     const user = await User.findById(id);
     if (!user) {
@@ -497,7 +540,10 @@ app.post('/api/admin/users/:id/password', async (req, res) => {
   }
 });
 
-// Health check endpoint (добавляем в API)
+/**
+ * GET `/api/health` — проверка работоспособности (Docker healthcheck).
+ * @memberof module:server
+ */
 app.get('/api/health', (req, res) => {
   const timestamp = new Date().toISOString();
   //console.log(`❤️ [${timestamp}] Health check - IP: ${req.ip}`);

@@ -1,4 +1,8 @@
 // routes/usagePeriods.js
+/**
+ * @module routes/usagePeriods
+ * @description Периоды использования VR. Префикс: `/api/usage-periods`.
+ */
 const express = require('express');
 const UsagePeriod = require('../models/UsagePeriod');
 const User = require('../models/User');

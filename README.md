@@ -25,6 +25,16 @@ curl http://localhost:8080/api/health
 - **API:** http://localhost:8080/api  
 - **WebSocket:** ws://localhost:8080  
 
+## Тесты и документация (Jest / JSDoc)
+
+```bash
+npm install
+npm test          # модульные тесты
+npm run docs      # HTML из JSDoc → docs/generated/index.html
+```
+
+Подробнее: `docs/README.md` (структура проекта, API, переменные окружения).
+
 ## Адреса и новая машина
 
 **Ничего подстраивать вручную не нужно.** Все запросы идут относительно того адреса, с которого открыта страница:

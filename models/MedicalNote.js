@@ -1,3 +1,7 @@
+/**
+ * @module models/MedicalNote
+ * @description Заметка врача по пациенту.
+ */
 const mongoose = require('mongoose');
 
 const medicalNoteSchema = new mongoose.Schema({

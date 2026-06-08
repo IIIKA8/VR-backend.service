@@ -1,4 +1,8 @@
 // routes/vr.js — приём данных реабилитации с VR-очков (Godot)
+/**
+ * @module routes/vr
+ * @description Режимы упражнений и приём результатов от VR-клиента. Префикс: `/api/vr`.
+ */
 const express = require('express');
 const mongoose = require('mongoose');
 const Device = require('../models/Device');

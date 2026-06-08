@@ -1,3 +1,7 @@
+/**
+ * @module models/License
+ * @description Лицензионный ключ доступа к VR.
+ */
 const mongoose = require('mongoose');
 
 const deviceSchema = new mongoose.Schema({

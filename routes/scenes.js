@@ -1,3 +1,7 @@
+/**
+ * @module routes/scenes
+ * @description VR-сцены и объекты сцен. Префикс: `/api/scenes`.
+ */
 const express = require('express');
 const router = express.Router();
 const VRScene = require('../models/VRScene');

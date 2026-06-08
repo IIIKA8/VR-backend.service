@@ -1,3 +1,7 @@
+/**
+ * @module routes/licenses
+ * @description Лицензии, выдача админом, валидация, purge. Префикс: `/api/licenses`.
+ */
 const express = require('express');
 const crypto = require('crypto');
 const License = require('../models/License');

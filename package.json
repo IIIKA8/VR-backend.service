@@ -8,7 +8,10 @@
     "dev": "node server.js",
     "seed": "node seed.js",
     "seed:bulk": "node seed-bulk.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "seed:demo": "node seed-demo.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "docs": "jsdoc -c jsdoc.json"
   },
   "keywords": [],
   "author": "",
@@ -20,5 +23,9 @@
     "express-session": "^1.18.2",
     "mongoose": "^8.18.1",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jsdoc": "^4.0.5"
   }
 }

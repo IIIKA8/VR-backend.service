@@ -1,3 +1,8 @@
+/**
+ * @module routes/users
+ * @description REST API пользователей. Префикс: `/api/users`.
+ * GET `/`, GET `/:id`, POST `/`, PUT `/:id`, DELETE `/:id`, PATCH `/:id/online`.
+ */
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');

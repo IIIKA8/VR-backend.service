@@ -1,5 +1,9 @@
 // routes/patient.js — личный кабинет пациента (только свои данные, read-only).
 // Доступ ограничен patientGuard в server.js (не админ и не врач).
+/**
+ * @module routes/patient
+ * @description API кабинета пациента (требует {@link module:server~patientGuard}). Префикс: `/api/patient`.
+ */
 const express = require('express');
 const User = require('../models/User');
 const MedicalNote = require('../models/MedicalNote');

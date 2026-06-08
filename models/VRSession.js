@@ -1,3 +1,7 @@
+/**
+ * @module models/VRSession
+ * @description Сеанс VR: хост, участники, устройство, статус.
+ */
 const mongoose = require('mongoose');
 
 const vrSessionSchema = new mongoose.Schema({

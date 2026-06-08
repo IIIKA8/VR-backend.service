@@ -1,3 +1,7 @@
+/**
+ * @module models/VRExerciseResult
+ * @description Результат VR-упражнения: ВАШ, режим, метрики.
+ */
 const mongoose = require('mongoose');
 
 /**

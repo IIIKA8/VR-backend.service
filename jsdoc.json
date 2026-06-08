@@ -1,0 +1,31 @@
+{
+  "source": {
+    "include": [
+      "server.js",
+      "routes",
+      "models",
+      "util",
+      "docs/modules-overview.js"
+    ],
+    "exclude": [
+      "node_modules",
+      "docs/generated",
+      "__tests__",
+      "web",
+      "seed.js",
+      "seed-bulk.js",
+      "seed-results.js",
+      "scripts"
+    ],
+    "includePattern": ".+\\.js$"
+  },
+  "opts": {
+    "destination": "./docs/generated",
+    "readme": "./docs/README.md",
+    "recurse": true,
+    "encoding": "utf8"
+  },
+  "tags": {
+    "allowUnknownTags": true
+  }
+}

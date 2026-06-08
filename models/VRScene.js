@@ -1,3 +1,7 @@
+/**
+ * @module models/VRScene
+ * @description VR-сцена и объекты окружения.
+ */
 const mongoose = require('mongoose');
 
 const vrSceneSchema = new mongoose.Schema({

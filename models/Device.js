@@ -1,4 +1,7 @@
-// models/Device.js
+/**
+ * @module models/Device
+ * @description Зарегистрированное VR-устройство (deviceId, статус, привязка).
+ */
 const mongoose = require('mongoose');
 
 const deviceSchema = new mongoose.Schema({

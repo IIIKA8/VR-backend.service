@@ -1,3 +1,7 @@
+/**
+ * @module routes/doctor
+ * @description API кабинета врача (требует {@link module:server~doctorGuard}). Префикс: `/api/doctor`.
+ */
 const express = require('express');
 const mongoose = require('mongoose');
 const User = require('../models/User');

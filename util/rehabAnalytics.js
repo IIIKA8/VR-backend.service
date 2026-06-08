@@ -1,5 +1,7 @@
-// util/rehabAnalytics.js — выборка и агрегация результатов реабилитации.
-// Используется кабинетом врача и личным кабинетом пациента.
+/**
+ * @module util/rehabAnalytics
+ * @description Агрегация результатов VR-упражнений и шкалы боли (ВАШ) для врача и пациента.
+ */
 const VRExerciseResult = require('../models/VRExerciseResult');
 
 const MODE_LABELS = {

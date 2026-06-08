@@ -1,4 +1,8 @@
 // routes/devices.js
+/**
+ * @module routes/devices
+ * @description VR-устройства: регистрация, проверка доступа, статус. Префикс: `/api/devices`.
+ */
 const express = require('express');
 const Device = require('../models/Device');
 const router = express.Router();

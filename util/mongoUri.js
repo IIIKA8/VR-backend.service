@@ -1,6 +1,11 @@
 /**
- * Единая сборка URI для server.js, seed.js, seed-bulk.js.
- * Приоритет: MONGO_USER+MONGO_PASSWORD+MONGO_HOST+MONGO_DB → MONGODB_URI → без auth.
+ * @module util/mongoUri
+ * @description Сборка строки подключения к MongoDB из переменных окружения.
+ */
+
+/**
+ * @memberof module:util/mongoUri
+ * @returns {string} URI MongoDB
  */
 function resolveMongoUri() {
   const host = process.env.MONGO_HOST || 'localhost';
@@ -18,6 +23,7 @@ function resolveMongoUri() {
   return `mongodb://${host}:27017/${db}`;
 }
 
+/** @memberof module:util/mongoUri */
 function mongoUriForLog(uri) {
   return uri.replace(/\/\/([^/]*?)@/, '//***:***@');
 }

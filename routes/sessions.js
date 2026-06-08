@@ -1,3 +1,7 @@
+/**
+ * @module routes/sessions
+ * @description VR-сеансы: создание, join/leave, позиции. Префикс: `/api/sessions`.
+ */
 const express = require('express');
 const router = express.Router();
 const VRSession = require('../models/VRSession');

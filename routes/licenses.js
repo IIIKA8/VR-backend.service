@@ -8,6 +8,7 @@ const License = require('../models/License');
 const User = require('../models/User');
 const { Types } = require('mongoose');
 const isObjectId = (v) => Types.ObjectId.isValid(v);
+const { verifyLicensePurgePassword } = require('../util/licensePurgeAuth');
 
 const router = express.Router();
 
@@ -55,11 +56,11 @@ router.post('/issue-admin', async (req, res) => {
         host: userId,
         device: deviceId, // связь устройства!
         status: 'active',
-        scene: null, // можно указать сцену по умолчанию
+        scene: null, 
         startedAt: new Date()
       });
       
-      // Связываем устройство с сессией (можно добавить в модель)
+      // Связываем устройство с сессией 
       result = {
         type: 'session',
         id: session._id,
@@ -291,8 +292,9 @@ router.post('/validate', async (req, res) => {
 router.delete('/purge/key/:key', async (req, res) => {
   try {
     const { admin_password } = req.body || {};
-    if (admin_password !== 'VR_adm123') {
-      return res.status(403).json({ error: 'forbidden' });
+    const purgeAuth = verifyLicensePurgePassword(admin_password);
+    if (!purgeAuth.ok) {
+      return res.status(purgeAuth.status).json({ error: purgeAuth.error });
     }
     const { key } = req.params;
     const del = await License.deleteOne({ key });
@@ -308,8 +310,9 @@ router.delete('/purge/key/:key', async (req, res) => {
 router.delete('/purge/user', async (req, res) => {
   try {
     const { admin_password, email, userId } = req.body || {};
-    if (admin_password !== 'VR_adm123') {
-      return res.status(403).json({ error: 'forbidden' });
+    const purgeAuth = verifyLicensePurgePassword(admin_password);
+    if (!purgeAuth.ok) {
+      return res.status(purgeAuth.status).json({ error: purgeAuth.error });
     }
 
     let user = null;

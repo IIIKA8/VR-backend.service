@@ -22,7 +22,8 @@ services:
       MONGO_DB: vr-app
       MONGO_USER: ${MONGO_USER:?Задайте MONGO_USER в .env}
       MONGO_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
-      SESS_SECRET: ${SESS_SECRET:-change-me-in-production}
+      SESS_SECRET: ${SESS_SECRET:?Задайте SESS_SECRET в .env (не короче 32 символов)}
+      LICENSE_PURGE_PASSWORD: ${LICENSE_PURGE_PASSWORD:-}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:
       mongodb:

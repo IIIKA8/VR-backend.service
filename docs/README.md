@@ -11,8 +11,7 @@ npm run docs
 
 Результат: каталог `docs/generated/` (откройте `index.html` в браузере).
 
-- **Рисунок 24** — страница **Modules** (список модулей).
-- **Рисунок 25** — модуль **routes/auth** (авторизация).
+
 
 ---
 
@@ -36,9 +35,9 @@ VR-backend.service/
 ├── util/                  # Валидация, URI MongoDB, аналитика
 ├── web/                   # Статика и HTML кабинетов
 ├── __tests__/             # Jest (модульные тесты)
-├── docs/                  # Исходники документации (этот каталог)
+├── docs/                  # JSDoc-документация
 ├── docker-compose.yml     # Локальный запуск app + MongoDB
-└── deploy/                # Compose и .env для продакшена (GHCR)
+└── deploy/                # Compose и .env для запуска из Docker-образа
 ```
 
 ---
@@ -48,7 +47,8 @@ VR-backend.service/
 | Переменная | Обязательность | Описание |
 |------------|----------------|----------|
 | `PORT` | нет (8080) | Порт на хосте при `docker compose` |
-| `SESS_SECRET` | да (прод) | Секрет подписи cookie сессии |
+| `SESS_SECRET` | да (прод) | Секрет подписи cookie сессии (≥ 32 символов) |
+| `LICENSE_PURGE_PASSWORD` | для purge | Пароль удаления лицензий в админке (не коммитить) |
 | `MONGO_USER` | да (Docker) | Пользователь MongoDB |
 | `MONGO_PASSWORD` | да (Docker) | Пароль MongoDB |
 | `NODE_ENV` | нет | `development` \| `production` |
@@ -97,7 +97,7 @@ docker compose up -d
 curl -s http://127.0.0.1:8080/api/health
 ```
 
-**Продакшен** (образ GHCR, только `deploy/`): см. `deploy/README.md`.
+**Запуск из готового Docker-образа:** см. `deploy/README.md`.
 
 Проверка контейнера: healthcheck по `GET /api/health` (интервал 30 с).
 
@@ -108,6 +108,5 @@ curl -s http://127.0.0.1:8080/api/health
 | Документ | Содержание |
 |----------|------------|
 | `README.md` | Обзор и быстрый старт |
-| `README-DOCKER.md` | Сборка образа |
-| `deploy/README.md` | Деплой на VPS |
+| `deploy/README.md` | Запуск из готового Docker-образа |
 | `npm test` | Модульные тесты Jest |

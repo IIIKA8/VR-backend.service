@@ -26,6 +26,7 @@ const path = require('path');
 const { Types } = require('mongoose');
 const crypto = require('crypto');
 const { validatePasswordLength } = require('./util/userDataValidation');
+const { getSessionSecret } = require('./util/sessionSecret');
 const isObjectId = (v) => Types.ObjectId.isValid(v);
 const session = require('express-session');
 
@@ -66,7 +67,7 @@ if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
 
 // --- СНАЧАЛА session! --- // (ПЕРЕД остальными middleware!)
 app.use(session({
-  secret: process.env.SESS_SECRET || 'SuperSecret-AdminSession2025',
+  secret: getSessionSecret(),
   resave: false,
   saveUninitialized: false,
   cookie: {

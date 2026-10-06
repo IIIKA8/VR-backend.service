@@ -25,7 +25,7 @@ Thumbs.db
 *.swo
 *~
 
-# Cursor
+# Local editor data
 .cursor-server/
 .cursor/
 

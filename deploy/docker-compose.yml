@@ -1,16 +1,6 @@
-# Продакшен на VPS: только образ из GHCR (репозиторий IIIKA8/VR-backend.service).
-# CI публикует: ghcr.io/iiika8/vr-backend.service:latest
-#
-# На сервере в этой же папке положите .env (скопируйте из .env.example).
-# Обновление после push в main:
-#   docker compose pull && docker compose up -d
-# или просто:
-#   docker compose up -d
-#   (pull_policy: always подтянет новый latest автоматически)
-
 services:
   app:
-    image: ${DOCKER_IMAGE:-ghcr.io/iiika8/vr-backend.service:latest}
+    image: ${DOCKER_IMAGE:?Задайте DOCKER_IMAGE в .env}
     pull_policy: always
     container_name: vr-backend-app
     restart: unless-stopped
@@ -20,12 +10,12 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 8080
       SERVER_IP: 0.0.0.0
-      # URI собирает приложение (encodeURIComponent) — не подставляйте пароль в MONGODB_URI через compose.
       MONGO_HOST: mongodb
       MONGO_DB: vr-app
       MONGO_USER: ${MONGO_USER:?Задайте MONGO_USER в .env}
       MONGO_PASSWORD: ${MONGO_PASSWORD:?Задайте MONGO_PASSWORD в .env}
       SESS_SECRET: ${SESS_SECRET:?Задайте SESS_SECRET в .env}
+      LICENSE_PURGE_PASSWORD: ${LICENSE_PURGE_PASSWORD:-}
       TRUST_PROXY: ${TRUST_PROXY:-1}
     depends_on:
       mongodb:
